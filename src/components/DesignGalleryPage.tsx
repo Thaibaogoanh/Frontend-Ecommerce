@@ -4,144 +4,208 @@ import { Footer } from './Footer';
 import { Checkbox } from './ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Search, Heart, Eye, ShoppingCart, ChevronRight, TrendingUp, Leaf } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { apiServices } from '../services/apiConfig';
+import { Loading } from './ui/loading';
+import { ErrorDisplay } from './ui/error';
 
-const designs = [
-  {
-    id: 1,
-    image: "https://images.unsplash.com/photo-1655141559787-25ac8cfca72f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcmludGVkJTIwdHNoaXJ0JTIwZGVzaWdufGVufDF8fHx8MTc2Mzg1NTM4OHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    title: "Minimalist Nature",
-    artist: "Green Artist",
-    category: "Nature",
-    tags: ["eco", "minimal", "leaf"],
-    price: 450000,
-    likes: 234,
-    views: 1520,
-    isEco: true,
-    isTrending: true,
-  },
-  {
-    id: 2,
-    image: "https://images.unsplash.com/photo-1655141559812-42f8c1e8942d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncmFwaGljJTIwdHNoaXJ0JTIwcHJpbnR8ZW58MXx8fHwxNzYzODU1Mzg5fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    title: "Save The Planet",
-    artist: "Eco Designer",
-    category: "Typography",
-    tags: ["eco", "quote", "planet"],
-    price: 399000,
-    likes: 189,
-    views: 980,
-    isEco: true,
-    isTrending: false,
-  },
-  {
-    id: 3,
-    image: "https://images.unsplash.com/photo-1748712073377-5c200bf4cbc5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxib3RhbmljYWwlMjBpbGx1c3RyYXRpb24lMjBwbGFudHxlbnwxfHx8fDE3NjM4NTUzOTJ8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    title: "Forest Spirit",
-    artist: "Nature Lover",
-    category: "Illustration",
-    tags: ["forest", "nature", "green"],
-    price: 520000,
-    likes: 312,
-    views: 2100,
-    isEco: true,
-    isTrending: true,
-  },
-  {
-    id: 4,
-    image: "https://images.unsplash.com/photo-1676134893614-fc13ef156284?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGFydCUyMHBhdHRlcm58ZW58MXx8fHwxNzYzNzg3Njg0fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    title: "Ocean Waves",
-    artist: "Blue Artist",
-    category: "Abstract",
-    tags: ["ocean", "wave", "blue"],
-    price: 480000,
-    likes: 267,
-    views: 1450,
-    isEco: true,
-    isTrending: false,
-  },
-  {
-    id: 5,
-    image: "https://images.unsplash.com/photo-1759572095329-1dcf9522762b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwdHNoaXJ0fGVufDF8fHx8MTc2MzgzMTc1MXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    title: "Green Revolution",
-    artist: "Eco Warrior",
-    category: "Typography",
-    tags: ["eco", "revolution", "green"],
-    price: 415000,
-    likes: 198,
-    views: 1120,
-    isEco: true,
-    isTrending: true,
-  },
-  {
-    id: 6,
-    image: "https://images.unsplash.com/photo-1610518066693-8c9f6d3d6455?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2aW50YWdlJTIwdHlwb2dyYXBoeSUyMGRlc2lnbnxlbnwxfHx8fDE3NjM4NTUzOTJ8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    title: "Vintage Nature",
-    artist: "Retro Designer",
-    category: "Vintage",
-    tags: ["vintage", "nature", "retro"],
-    price: 465000,
-    likes: 221,
-    views: 1340,
-    isEco: false,
-    isTrending: false,
-  },
-  {
-    id: 7,
-    image: "https://images.unsplash.com/photo-1616397325279-e7bb752d0e28?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxnZW9tZXRyaWMlMjBtaW5pbWFsJTIwZGVzaWdufGVufDF8fHx8MTc2Mzg1NTM5M3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    title: "Modern Eco",
-    artist: "Modern Artist",
-    category: "Modern",
-    tags: ["modern", "eco", "simple"],
-    price: 435000,
-    likes: 245,
-    views: 1680,
-    isEco: true,
-    isTrending: true,
-  },
-  {
-    id: 8,
-    image: "https://images.unsplash.com/photo-1567079292691-2ff16e275356?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHJlZXQlMjBhcnQlMjB1cmJhbnxlbnwxfHx8fDE3NjM3NzI1NDR8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    title: "Earth Day",
-    artist: "Green Creator",
-    category: "Event",
-    tags: ["earth", "day", "celebrate"],
-    price: 390000,
-    likes: 176,
-    views: 890,
-    isEco: true,
-    isTrending: false,
-  },
-];
+// Designs are now loaded from API
 
 export function DesignGalleryPage() {
+  const [designs, setDesigns] = useState<any[]>([]);
+  const [allDesigns, setAllDesigns] = useState<any[]>([]); // Store all designs for filtering
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState('trending');
   const [likedDesigns, setLikedDesigns] = useState<number[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [ecoOnly, setEcoOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    loadDesigns();
+  }, [currentPage]);
+
+  useEffect(() => {
+    // Apply filters when they change
+    applyFilters();
+  }, [allDesigns, selectedCategories, selectedStyles, selectedTags, ecoOnly, searchQuery, sortBy]);
+
+  const loadDesigns = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await apiServices.designs.getAll(currentPage, 100) as any; // Load more for filtering
+      // Transform the API response to match the component's expected structure
+      const transformedDesigns = (response.designs || []).map((design: any) => ({
+        id: design.DESIGN_ID,
+        title: design.title,
+        artist: 'Designer', // Default since API doesn't provide this
+        image: design.preview_url || 'https://placehold.co/400x400',
+        likes: design.likes || 0,
+        views: design.downloads || 0,
+        price: 0, // Default price
+        tags: design.design_tag ? [design.design_tag.toLowerCase()] : [],
+        category: design.category || 'All',
+        style: 'Modern', // Default
+        isEco: design.category?.toLowerCase().includes('eco') || design.category?.toLowerCase().includes('nature'),
+        isTrending: design.likes > 10 || design.downloads > 50,
+      }));
+      setAllDesigns(transformedDesigns);
+      const total = response.total || 0;
+      setTotalPages(Math.ceil(total / 12));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể tải thiết kế');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...allDesigns];
+
+    // Search filter
+    if (searchQuery) {
+      filtered = filtered.filter(d => 
+        d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (d.tags && d.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase())))
+      );
+    }
+
+    // Category filter
+    if (selectedCategories.length > 0 && !selectedCategories.includes('All')) {
+      filtered = filtered.filter(d => selectedCategories.includes(d.category));
+    }
+
+    // Style filter
+    if (selectedStyles.length > 0) {
+      filtered = filtered.filter(d => selectedStyles.includes(d.style));
+    }
+
+    // Tag filter
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(d => 
+        d.tags && d.tags.some((tag: string) => selectedTags.includes(tag))
+      );
+    }
+
+    // Eco filter
+    if (ecoOnly) {
+      filtered = filtered.filter(d => d.isEco);
+    }
+
+    // Sort
+    switch (sortBy) {
+      case 'trending':
+        filtered.sort((a, b) => (b.isTrending ? 1 : 0) - (a.isTrending ? 1 : 0) || b.likes - a.likes);
+        break;
+      case 'newest':
+        // Assuming designs have createdAt, otherwise keep original order
+        break;
+      case 'popular':
+        filtered.sort((a, b) => b.likes - a.likes);
+        break;
+      case 'price-low':
+        filtered.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-high':
+        filtered.sort((a, b) => b.price - a.price);
+        break;
+    }
+
+    // Paginate
+    const start = (currentPage - 1) * 12;
+    const end = start + 12;
+    setDesigns(filtered.slice(start, end));
+    setTotalPages(Math.ceil(filtered.length / 12));
+  };
 
   const toggleLike = (id: number) => {
-    setLikedDesigns(prev => 
+    setLikedDesigns(prev =>
       prev.includes(id) ? prev.filter(designId => designId !== id) : [...prev, id]
     );
   };
 
+  const toggleCategory = (category: string) => {
+    if (category === 'All') {
+      setSelectedCategories([]);
+    } else {
+      setSelectedCategories(prev =>
+        prev.includes(category) 
+          ? prev.filter(c => c !== category)
+          : [...prev, category]
+      );
+    }
+    setCurrentPage(1);
+  };
+
+  const toggleStyle = (style: string) => {
+    setSelectedStyles(prev =>
+      prev.includes(style) 
+        ? prev.filter(s => s !== style)
+        : [...prev, style]
+    );
+    setCurrentPage(1);
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+    setCurrentPage(1);
+  };
+
+  const clearAllFilters = () => {
+    setSelectedCategories([]);
+    setSelectedStyles([]);
+    setSelectedTags([]);
+    setEcoOnly(false);
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center px-4">
+          <ErrorDisplay message={error} onRetry={loadDesigns} />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <Header />
-      
+
       <div className="flex-1">
         {/* Hero Banner */}
         <div className="bg-gradient-to-r from-[#BCF181] to-[#ca6946] text-black py-16">
           <div className="max-w-7xl mx-auto px-4 text-center">
-            <h1 className="font-['Lora'] mb-4">Discover Unique Designs</h1>
+            <h1 className="font-['Lora'] mb-4">Khám phá thiết kế độc đáo</h1>
             <p className="text-xl mb-8 max-w-2xl mx-auto">
-              Browse thousands of eco-friendly designs from talented artists around the world
+              Duyệt hàng nghìn thiết kế thân thiện môi trường từ các nghệ sĩ tài năng trên khắp thế giới
             </p>
-            
+
             {/* Search Bar */}
             <div className="max-w-2xl mx-auto relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
               <input
                 type="text"
                 placeholder="Tìm kiếm thiết kế..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="w-full pl-14 pr-4 py-4 rounded-full border-2 border-white/50 focus:outline-none focus:border-white bg-white/90 backdrop-blur-sm"
               />
             </div>
@@ -152,9 +216,9 @@ export function DesignGalleryPage() {
         <div className="bg-gray-50 border-b">
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <a href="#home" className="hover:text-black">Home</a>
+              <a href="#home" className="hover:text-black">Trang chủ</a>
               <ChevronRight className="w-4 h-4" />
-              <span className="text-black">Design Gallery</span>
+              <span className="text-black">Thư viện thiết kế</span>
             </div>
           </div>
         </div>
@@ -165,17 +229,28 @@ export function DesignGalleryPage() {
             <aside className="hidden lg:block w-64 flex-shrink-0">
               <div className="sticky top-24">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-['Lato'] uppercase">Filters</h3>
-                  <button className="text-[#ca6946] hover:underline">Clear All</button>
+                  <h3 className="font-['Lato'] uppercase">Bộ lọc</h3>
+                  <button 
+                    onClick={clearAllFilters}
+                    className="text-[#ca6946] hover:underline"
+                  >
+                    Xóa tất cả
+                  </button>
                 </div>
 
                 {/* Category */}
                 <div className="mb-6 pb-6 border-b">
-                  <h4 className="font-['Lato'] mb-3">Category</h4>
+                  <h4 className="font-['Lato'] mb-3">Danh mục</h4>
                   <div className="space-y-2">
                     {['All', 'Nature', 'Typography', 'Illustration', 'Abstract', 'Vintage', 'Modern'].map((cat) => (
-                      <label key={cat} className="flex items-center gap-2 cursor-pointer hover:text-[#ca6946]">
-                        <Checkbox />
+                      <label 
+                        key={cat} 
+                        className="flex items-center gap-2 cursor-pointer hover:text-[#ca6946]"
+                      >
+                        <Checkbox 
+                          checked={cat === 'All' ? selectedCategories.length === 0 : selectedCategories.includes(cat)}
+                          onCheckedChange={() => toggleCategory(cat)}
+                        />
                         <span>{cat}</span>
                       </label>
                     ))}
@@ -184,11 +259,17 @@ export function DesignGalleryPage() {
 
                 {/* Style */}
                 <div className="mb-6 pb-6 border-b">
-                  <h4 className="font-['Lato'] mb-3">Style</h4>
+                  <h4 className="font-['Lato'] mb-3">Phong cách</h4>
                   <div className="space-y-2">
                     {['Minimalist', 'Vintage', 'Modern', 'Hand-drawn', 'Geometric', 'Organic'].map((style) => (
-                      <label key={style} className="flex items-center gap-2 cursor-pointer hover:text-[#ca6946]">
-                        <Checkbox />
+                      <label 
+                        key={style} 
+                        className="flex items-center gap-2 cursor-pointer hover:text-[#ca6946]"
+                      >
+                        <Checkbox 
+                          checked={selectedStyles.includes(style)}
+                          onCheckedChange={() => toggleStyle(style)}
+                        />
                         <span className="text-sm">{style}</span>
                       </label>
                     ))}
@@ -197,12 +278,17 @@ export function DesignGalleryPage() {
 
                 {/* Tags */}
                 <div className="mb-6 pb-6 border-b">
-                  <h4 className="font-['Lato'] mb-3">Popular Tags</h4>
+                  <h4 className="font-['Lato'] mb-3">Thẻ phổ biến</h4>
                   <div className="flex flex-wrap gap-2">
                     {['eco', 'nature', 'minimal', 'vintage', 'quote', 'animal', 'plant', 'ocean'].map((tag) => (
                       <button
                         key={tag}
-                        className="px-3 py-1 border border-gray-300 rounded-full text-sm hover:border-[#ca6946] hover:text-[#ca6946] transition-colors"
+                        onClick={() => toggleTag(tag)}
+                        className={`px-3 py-1 border rounded-full text-sm transition-colors ${
+                          selectedTags.includes(tag)
+                            ? 'border-[#ca6946] text-[#ca6946] bg-[#ca6946]/10'
+                            : 'border-gray-300 hover:border-[#ca6946] hover:text-[#ca6946]'
+                        }`}
                       >
                         #{tag}
                       </button>
@@ -212,16 +298,28 @@ export function DesignGalleryPage() {
 
                 {/* Eco Only */}
                 <div className="mb-6 pb-6 border-b">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox />
+                  <label 
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={() => {
+                      setEcoOnly(!ecoOnly);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <Checkbox 
+                      checked={ecoOnly}
+                      onCheckedChange={(checked) => {
+                        setEcoOnly(checked as boolean);
+                        setCurrentPage(1);
+                      }}
+                    />
                     <Leaf className="w-4 h-4 text-green-700" />
-                    <span>Eco-themed only</span>
+                    <span>Chỉ chủ đề Xanh</span>
                   </label>
                 </div>
 
                 {/* Price Range */}
                 <div className="mb-6">
-                  <h4 className="font-['Lato'] mb-3">Price Range</h4>
+                  <h4 className="font-['Lato'] mb-3">Khoảng giá</h4>
                   <div className="space-y-2">
                     {['Under 400k', '400k - 500k', '500k - 600k', 'Over 600k'].map((range) => (
                       <label key={range} className="flex items-center gap-2 cursor-pointer hover:text-[#ca6946]">
@@ -239,19 +337,25 @@ export function DesignGalleryPage() {
               {/* Sort & Filter Bar */}
               <div className="flex items-center justify-between mb-6">
                 <p className="text-gray-600">
-                  Showing <span className="font-medium">{designs.length}</span> designs
+                  Hiển thị <span className="font-medium">{designs.length}</span> thiết kế
                 </p>
 
-                <Select value={sortBy} onValueChange={setSortBy}>
+                <Select 
+                  value={sortBy} 
+                  onValueChange={(value) => {
+                    setSortBy(value);
+                    setCurrentPage(1);
+                  }}
+                >
                   <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Sort by" />
+                    <SelectValue placeholder="Sắp xếp theo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="trending">Trending</SelectItem>
-                    <SelectItem value="newest">Newest First</SelectItem>
-                    <SelectItem value="popular">Most Popular</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
+                    <SelectItem value="trending">Đang thịnh hành</SelectItem>
+                    <SelectItem value="newest">Mới nhất</SelectItem>
+                    <SelectItem value="popular">Phổ biến nhất</SelectItem>
+                    <SelectItem value="price-low">Giá: Thấp đến cao</SelectItem>
+                    <SelectItem value="price-high">Giá: Cao đến thấp</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -262,14 +366,14 @@ export function DesignGalleryPage() {
                   <div key={design.id} className="group relative bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-xl transition-all">
                     {/* Image */}
                     <div className="block aspect-square relative overflow-hidden">
-                      <a href="#design-detail" className="block w-full h-full">
+                      <a href={`#design-detail?id=${design.id}`} className="block w-full h-full">
                         <ImageWithFallback
                           src={design.image}
                           alt={design.title}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                       </a>
-                      
+
                       {/* Badges */}
                       <div className="absolute top-3 left-3 flex flex-col gap-2 pointer-events-none">
                         {design.isEco && (
@@ -294,21 +398,20 @@ export function DesignGalleryPage() {
                             e.stopPropagation();
                             toggleLike(design.id);
                           }}
-                          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors pointer-events-auto ${
-                            likedDesigns.includes(design.id)
-                              ? 'bg-red-500 text-white'
-                              : 'bg-white text-black hover:bg-red-500 hover:text-white'
-                          }`}
+                          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors pointer-events-auto ${likedDesigns.includes(design.id)
+                            ? 'bg-red-500 text-white'
+                            : 'bg-white text-black hover:bg-red-500 hover:text-white'
+                            }`}
                         >
                           <Heart className={`w-5 h-5 ${likedDesigns.includes(design.id) ? 'fill-current' : ''}`} />
                         </button>
                         <a
-                          href="#design-detail"
+                          href={`#design-detail?id=${design.id}`}
                           className="w-12 h-12 bg-white rounded-full flex items-center justify-center hover:bg-[#BCF181] transition-colors pointer-events-auto"
                         >
                           <Eye className="w-5 h-5 text-black" />
                         </a>
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -322,14 +425,14 @@ export function DesignGalleryPage() {
 
                     {/* Info */}
                     <div className="p-4">
-                      <a href="#design-detail">
+                      <a href={`#design-detail?id=${design.id}`}>
                         <h3 className="font-['Lato'] mb-1 hover:text-[#ca6946] transition-colors">{design.title}</h3>
                       </a>
                       <p className="text-sm text-gray-600 mb-3">by {design.artist}</p>
 
                       {/* Tags */}
                       <div className="flex flex-wrap gap-1 mb-3">
-                        {design.tags.slice(0, 3).map((tag) => (
+                        {(design.tags || []).slice(0, 3).map((tag) => (
                           <span key={tag} className="text-xs bg-gray-100 px-2 py-1 rounded">
                             #{tag}
                           </span>
@@ -348,7 +451,7 @@ export function DesignGalleryPage() {
                             {design.views}
                           </span>
                         </div>
-                        <p className="font-medium">{design.price.toLocaleString('vi-VN')}₫</p>
+                        <p className="font-medium">{(design.price || 0).toLocaleString('vi-VN')}₫</p>
                       </div>
                     </div>
                   </div>
@@ -358,13 +461,13 @@ export function DesignGalleryPage() {
               {/* Pagination */}
               <div className="flex justify-center gap-2">
                 <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
-                  Previous
+                  Trước
                 </button>
                 <button className="px-4 py-2 bg-black text-white rounded">1</button>
                 <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">2</button>
                 <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">3</button>
                 <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
-                  Next
+                  Sau
                 </button>
               </div>
             </div>

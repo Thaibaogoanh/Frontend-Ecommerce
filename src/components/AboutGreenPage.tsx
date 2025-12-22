@@ -52,15 +52,15 @@ export function AboutGreenPage() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <Header />
-      
+
       <div className="flex-1">
         {/* Breadcrumbs */}
         <div className="bg-gray-50 border-b">
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <a href="#home" className="hover:text-black">Home</a>
+              <a href="#home" className="hover:text-black">Trang chủ</a>
               <ChevronRight className="w-4 h-4" />
-              <span className="text-black">Green Commitment</span>
+              <span className="text-black">Cam kết Xanh</span>
             </div>
           </div>
         </div>
@@ -71,23 +71,23 @@ export function AboutGreenPage() {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full mb-6">
               <Leaf className="w-10 h-10 text-green-700" />
             </div>
-            <h1 className="font-['Lora'] mb-6">Our Green Commitment</h1>
+            <h1 className="font-['Lora'] mb-6">Cam kết Xanh của chúng tôi</h1>
             <p className="text-xl max-w-3xl mx-auto mb-8">
-              We believe fashion shouldn't cost the Earth. Every product we create is designed with 
-              sustainability at its core, from materials to manufacturing.
+              Chúng tôi tin rằng thời trang không nên phải trả giá bằng Trái Đất. Mỗi sản phẩm chúng tôi tạo ra đều được thiết kế với
+              tính bền vững làm cốt lõi, từ vật liệu đến sản xuất.
             </p>
-            <p className="font-medium">YOUR STYLE. OUR PLANET. 🌍</p>
+            <p className="font-medium">PHONG CÁCH CỦA BẠN. HÀNH TINH CỦA CHÚNG TA. 🌍</p>
           </div>
         </div>
 
         {/* Mission Statement */}
         <div className="max-w-7xl mx-auto px-4 py-16">
           <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="font-['Lora'] mb-6">Why We're Green</h2>
+            <h2 className="font-['Lora'] mb-6">Tại sao chúng tôi Xanh</h2>
             <p className="text-lg text-gray-600 leading-relaxed">
-              The fashion industry is one of the world's largest polluters. We're here to change that. 
-              Through Print-on-Demand technology, sustainable materials, and eco-friendly practices, 
-              we're proving that style and sustainability can go hand in hand.
+              Ngành thời trang là một trong những ngành gây ô nhiễm lớn nhất thế giới. Chúng tôi ở đây để thay đổi điều đó.
+              Thông qua công nghệ In-theo-yêu-cầu, vật liệu bền vững và thực hành thân thiện môi trường,
+              chúng tôi đang chứng minh rằng phong cách và tính bền vững có thể song hành cùng nhau.
             </p>
           </div>
 
@@ -106,10 +106,10 @@ export function AboutGreenPage() {
         <div className="bg-gray-50 py-16">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="font-['Lora'] mb-4">Sustainable Materials</h2>
+              <h2 className="font-['Lora'] mb-4">Vật liệu bền vững</h2>
               <p className="text-gray-600 max-w-2xl mx-auto">
-                We carefully select every material to ensure minimal environmental impact 
-                without compromising on quality or comfort.
+                Chúng tôi cẩn thận lựa chọn mỗi vật liệu để đảm bảo tác động môi trường tối thiểu
+                mà không ảnh hưởng đến chất lượng hay sự thoải mái.
               </p>
             </div>
 
@@ -141,13 +141,13 @@ export function AboutGreenPage() {
             <div>
               <div className="inline-flex items-center gap-2 bg-[#BCF181] px-4 py-2 rounded-full mb-6">
                 <Droplets className="w-5 h-5 text-green-800" />
-                <span className="font-medium text-green-900">Water-Based Inks</span>
+                <span className="font-medium text-green-900">Mực nước</span>
               </div>
-              <h2 className="font-['Lora'] mb-6">Eco-Friendly Printing</h2>
+              <h2 className="font-['Lora'] mb-6">In thân thiện môi trường</h2>
               <p className="text-gray-600 mb-6 leading-relaxed">
-                We use only water-based, non-toxic inks that are free from harmful chemicals 
-                like PVC and phthalates. Our printing process is designed to minimize waste 
-                and energy consumption.
+                Chúng tôi chỉ sử dụng mực nước, không độc hại, không chứa các hóa chất có hại
+                như PVC và phthalates. Quy trình in của chúng tôi được thiết kế để giảm thiểu chất thải
+                và tiêu thụ năng lượng.
               </p>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
@@ -155,8 +155,8 @@ export function AboutGreenPage() {
                     <Leaf className="w-4 h-4 text-green-700" />
                   </div>
                   <div>
-                    <p className="font-medium mb-1">No Harmful Chemicals</p>
-                    <p className="text-sm text-gray-600">Free from PVC, phthalates, and formaldehyde</p>
+                    <p className="font-medium mb-1">Không có hóa chất độc hại</p>
+                    <p className="text-sm text-gray-600">Không chứa PVC, phthalates và formaldehyde</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -164,8 +164,8 @@ export function AboutGreenPage() {
                     <Droplets className="w-4 h-4 text-green-700" />
                   </div>
                   <div>
-                    <p className="font-medium mb-1">Water-Based Formula</p>
-                    <p className="text-sm text-gray-600">Biodegradable and safe for the environment</p>
+                    <p className="font-medium mb-1">Công thức mực nước</p>
+                    <p className="text-sm text-gray-600">Có thể phân hủy sinh học và an toàn cho môi trường</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -173,29 +173,29 @@ export function AboutGreenPage() {
                     <Heart className="w-4 h-4 text-green-700" />
                   </div>
                   <div>
-                    <p className="font-medium mb-1">Soft & Durable</p>
-                    <p className="text-sm text-gray-600">Long-lasting prints that feel great on skin</p>
+                    <p className="font-medium mb-1">Mềm mại & Bền</p>
+                    <p className="text-sm text-gray-600">In lâu dài, cảm giác tuyệt vời trên da</p>
                   </div>
                 </div>
               </div>
             </div>
             <div className="bg-gradient-to-br from-[#BCF181] to-[#ca6946] rounded-2xl p-12 text-white">
-              <h3 className="font-['Lato'] uppercase tracking-wider mb-4">Print-on-Demand Advantage</h3>
+              <h3 className="font-['Lato'] uppercase tracking-wider mb-4">Lợi ích In-theo-yêu-cầu</h3>
               <p className="mb-6">
-                Unlike traditional fashion, we only produce what's ordered. This means:
+                Khác với thời trang truyền thống, chúng tôi chỉ sản xuất những gì được đặt hàng. Điều này có nghĩa là:
               </p>
               <div className="space-y-4">
                 <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
-                  <p className="font-bold mb-1">Zero Overproduction</p>
-                  <p className="text-sm text-white/90">No wasted inventory or unsold stock</p>
+                  <p className="font-bold mb-1">Không sản xuất dư thừa</p>
+                  <p className="text-sm text-white/90">Không lãng phí hàng tồn kho hoặc hàng không bán được</p>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
-                  <p className="font-bold mb-1">Reduced Carbon Footprint</p>
-                  <p className="text-sm text-white/90">Less transportation and storage</p>
+                  <p className="font-bold mb-1">Giảm dấu chân carbon</p>
+                  <p className="text-sm text-white/90">Ít vận chuyển và lưu trữ hơn</p>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
-                  <p className="font-bold mb-1">Lower Water Usage</p>
-                  <p className="text-sm text-white/90">Only use resources when needed</p>
+                  <p className="font-bold mb-1">Sử dụng nước ít hơn</p>
+                  <p className="text-sm text-white/90">Chỉ sử dụng tài nguyên khi cần thiết</p>
                 </div>
               </div>
             </div>
@@ -208,12 +208,12 @@ export function AboutGreenPage() {
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 bg-[#BCF181] px-4 py-2 rounded-full mb-6">
                 <Award className="w-5 h-5 text-green-800" />
-                <span className="font-medium text-green-900">Certified & Verified</span>
+                <span className="font-medium text-green-900">Được chứng nhận & Xác minh</span>
               </div>
-              <h2 className="font-['Lora'] mb-4">Our Green Certifications</h2>
+              <h2 className="font-['Lora'] mb-4">Chứng nhận Xanh của chúng tôi</h2>
               <p className="text-gray-600 max-w-2xl mx-auto">
-                We don't just talk about sustainability—we prove it with internationally 
-                recognized certifications.
+                Chúng tôi không chỉ nói về tính bền vững—chúng tôi chứng minh điều đó bằng các
+                chứng nhận được quốc tế công nhận.
               </p>
             </div>
 
@@ -235,22 +235,22 @@ export function AboutGreenPage() {
         {/* Call to Action */}
         <div className="max-w-7xl mx-auto px-4 py-16">
           <div className="bg-gradient-to-r from-[#BCF181] to-[#ca6946] rounded-2xl p-12 text-center">
-            <h2 className="font-['Lora'] text-white mb-6">Join Our Green Mission</h2>
+            <h2 className="font-['Lora'] text-white mb-6">Tham gia sứ mệnh Xanh của chúng tôi</h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-              Every purchase you make helps plant trees, reduce waste, and support sustainable practices.
+              Mỗi lần mua hàng của bạn giúp trồng cây, giảm chất thải và hỗ trợ các thực hành bền vững.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <a
                 href="#blanks"
                 className="bg-black hover:bg-gray-800 text-white px-8 py-4 rounded-full transition-all"
               >
-                Shop Sustainable Products
+                Mua sản phẩm bền vững
               </a>
               <a
                 href="#contact"
                 className="bg-white hover:bg-gray-100 text-black px-8 py-4 rounded-full transition-all"
               >
-                Learn More
+                Tìm hiểu thêm
               </a>
             </div>
           </div>

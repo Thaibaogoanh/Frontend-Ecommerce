@@ -6,83 +6,83 @@ import { Search, ChevronRight, MessageCircle, Mail, Phone } from 'lucide-react';
 
 const faqCategories = [
   {
-    category: "Orders & Shipping",
+    category: "Đơn hàng & Vận chuyển",
     faqs: [
       {
-        question: "How long does shipping take?",
-        answer: "Standard shipping takes 5-7 business days. Express shipping (2-3 days) is available for an additional fee. All orders are carbon-neutral shipped!"
+        question: "Thời gian vận chuyển mất bao lâu?",
+        answer: "Vận chuyển tiêu chuẩn mất 5-7 ngày làm việc. Vận chuyển nhanh (2-3 ngày) có sẵn với phí bổ sung. Tất cả đơn hàng được vận chuyển carbon-neutral!"
       },
       {
-        question: "Can I track my order?",
-        answer: "Yes! Once your order ships, you'll receive a tracking number via email. You can also track your order in your Dashboard under 'Orders'."
+        question: "Tôi có thể theo dõi đơn hàng không?",
+        answer: "Có! Khi đơn hàng được gửi đi, bạn sẽ nhận được mã vận đơn qua email. Bạn cũng có thể theo dõi đơn hàng trong Bảng điều khiển của bạn ở mục 'Đơn hàng'."
       },
       {
-        question: "What if my order is late?",
-        answer: "Please contact our support team if your order hasn't arrived within the estimated timeframe. We'll investigate and help resolve the issue."
+        question: "Nếu đơn hàng đến muộn thì sao?",
+        answer: "Vui lòng liên hệ đội ngũ hỗ trợ của chúng tôi nếu đơn hàng của bạn chưa đến trong thời gian ước tính. Chúng tôi sẽ điều tra và giúp giải quyết vấn đề."
       },
     ]
   },
   {
-    category: "Customization & Design",
+    category: "Tùy chỉnh & Thiết kế",
     faqs: [
       {
-        question: "How do I customize my product?",
-        answer: "Choose a blank product, click 'Start Designing', then use our customizer tool to upload images, add text, or choose from our design library."
+        question: "Làm thế nào để tùy chỉnh sản phẩm?",
+        answer: "Chọn một sản phẩm phôi, nhấp 'Bắt đầu thiết kế', sau đó sử dụng công cụ tùy chỉnh để tải lên hình ảnh, thêm văn bản, hoặc chọn từ thư viện thiết kế của chúng tôi."
       },
       {
-        question: "What file formats do you accept?",
-        answer: "We accept PNG, JPG, and SVG files. For best print quality, we recommend high-resolution images (300 DPI) with transparent backgrounds."
+        question: "Bạn chấp nhận định dạng file nào?",
+        answer: "Chúng tôi chấp nhận file PNG, JPG và SVG. Để có chất lượng in tốt nhất, chúng tôi khuyên dùng hình ảnh độ phân giải cao (300 DPI) với nền trong suốt."
       },
       {
-        question: "Can I preview my design before ordering?",
-        answer: "Yes! Our customizer shows a real-time preview of your design on the product. You can adjust size, position, and rotation before adding to cart."
+        question: "Tôi có thể xem trước thiết kế trước khi đặt hàng không?",
+        answer: "Có! Công cụ tùy chỉnh của chúng tôi hiển thị bản xem trước thời gian thực của thiết kế trên sản phẩm. Bạn có thể điều chỉnh kích thước, vị trí và xoay trước khi thêm vào giỏ hàng."
       },
     ]
   },
   {
-    category: "Products & Quality",
+    category: "Sản phẩm & Chất lượng",
     faqs: [
       {
-        question: "What materials are your products made from?",
-        answer: "We use 100% organic cotton, recycled polyester, and bamboo blends. All materials are certified (GOTS, OEKO-TEX, Fair Trade)."
+        question: "Sản phẩm của bạn được làm từ chất liệu gì?",
+        answer: "Chúng tôi sử dụng 100% cotton hữu cơ, polyester tái chế và hỗn hợp tre. Tất cả chất liệu đều được chứng nhận (GOTS, OEKO-TEX, Fair Trade)."
       },
       {
-        question: "How do I care for my eco-friendly products?",
-        answer: "Wash in cold water, inside out, and air dry when possible. Use eco-friendly detergent. Avoid bleach and high heat to preserve print quality."
+        question: "Làm thế nào để chăm sóc sản phẩm thân thiện môi trường?",
+        answer: "Giặt bằng nước lạnh, mặt trong ra ngoài và phơi khô khi có thể. Sử dụng chất tẩy rửa thân thiện môi trường. Tránh chất tẩy và nhiệt độ cao để bảo quản chất lượng in."
       },
       {
-        question: "What sizes do you offer?",
-        answer: "We offer sizes from S to XXL. Check our size guide on each product page for detailed measurements."
+        question: "Bạn cung cấp những size nào?",
+        answer: "Chúng tôi cung cấp size từ S đến XXL. Kiểm tra hướng dẫn size trên mỗi trang sản phẩm để biết số đo chi tiết."
       },
     ]
   },
   {
-    category: "Returns & Exchanges",
+    category: "Đổi trả & Hoàn tiền",
     faqs: [
       {
-        question: "What is your return policy?",
-        answer: "Custom products can be returned within 14 days if there's a quality issue or printing error. Contact us with photos and we'll make it right!"
+        question: "Chính sách đổi trả của bạn là gì?",
+        answer: "Sản phẩm tùy chỉnh có thể được trả lại trong vòng 14 ngày nếu có vấn đề về chất lượng hoặc lỗi in. Liên hệ với chúng tôi kèm ảnh và chúng tôi sẽ xử lý!"
       },
       {
-        question: "Can I exchange for a different size?",
-        answer: "Yes! If the product doesn't fit, contact us within 14 days and we'll arrange an exchange (subject to stock availability)."
+        question: "Tôi có thể đổi sang size khác không?",
+        answer: "Có! Nếu sản phẩm không vừa, liên hệ với chúng tôi trong vòng 14 ngày và chúng tôi sẽ sắp xếp đổi hàng (tùy thuộc vào tình trạng tồn kho)."
       },
     ]
   },
   {
-    category: "Green Points & Rewards",
+    category: "Điểm Xanh & Phần thưởng",
     faqs: [
       {
-        question: "How do I earn Green Points?",
-        answer: "Earn 10 points per 100,000₫ spent, plus 50 bonus points for eco-friendly products, 100 points for reviews, and 200 points for referrals."
+        question: "Làm thế nào để kiếm Điểm Xanh?",
+        answer: "Kiếm 10 điểm cho mỗi 100.000₫ chi tiêu, cộng thêm 50 điểm thưởng cho sản phẩm thân thiện môi trường, 100 điểm cho đánh giá và 200 điểm cho giới thiệu."
       },
       {
-        question: "How do I redeem my points?",
-        answer: "Go to your Dashboard > Rewards tab, choose a voucher, and apply the code at checkout. Points can be used for discounts and free shipping."
+        question: "Làm thế nào để đổi điểm?",
+        answer: "Vào Bảng điều khiển > tab Phần thưởng, chọn voucher và áp dụng mã khi thanh toán. Điểm có thể được sử dụng để giảm giá và miễn phí vận chuyển."
       },
       {
-        question: "Do Green Points expire?",
-        answer: "Points are valid for 12 months from the date earned. We'll send you a reminder before they expire."
+        question: "Điểm Xanh có hết hạn không?",
+        answer: "Điểm có hiệu lực trong 12 tháng kể từ ngày kiếm được. Chúng tôi sẽ gửi cho bạn lời nhắc trước khi chúng hết hạn."
       },
     ]
   },
@@ -98,9 +98,9 @@ export function HelpPage() {
         <div className="bg-gray-50 border-b">
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <a href="#home" className="hover:text-black">Home</a>
+              <a href="#home" className="hover:text-black">Trang chủ</a>
               <ChevronRight className="w-4 h-4" />
-              <span className="text-black">Help Center</span>
+              <span className="text-black">Trung tâm trợ giúp</span>
             </div>
           </div>
         </div>
@@ -108,9 +108,9 @@ export function HelpPage() {
         {/* Hero */}
         <div className="bg-gradient-to-r from-[#BCF181] to-[#ca6946] text-black py-16">
           <div className="max-w-7xl mx-auto px-4 text-center">
-            <h1 className="font-['Lora'] mb-4">How Can We Help?</h1>
+            <h1 className="font-['Lora'] mb-4">Chúng tôi có thể giúp gì cho bạn?</h1>
             <p className="text-xl mb-8 max-w-2xl mx-auto">
-              Find answers to common questions or get in touch with our support team
+              Tìm câu trả lời cho các câu hỏi thường gặp hoặc liên hệ với đội ngũ hỗ trợ của chúng tôi
             </p>
             
             {/* Search */}
@@ -118,7 +118,7 @@ export function HelpPage() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Search for answers..."
+                placeholder="Tìm kiếm câu trả lời..."
                 className="pl-14 pr-4 py-4 rounded-full border-2 border-white/50 focus:border-white bg-white/90 backdrop-blur-sm text-lg"
               />
             </div>
@@ -127,7 +127,7 @@ export function HelpPage() {
 
         {/* FAQ Section */}
         <div className="max-w-4xl mx-auto px-4 py-16">
-          <h2 className="font-['Lora'] text-center mb-12">Frequently Asked Questions</h2>
+          <h2 className="font-['Lora'] text-center mb-12">Câu hỏi thường gặp</h2>
 
           <div className="space-y-8">
             {faqCategories.map((category, idx) => (
@@ -156,8 +156,8 @@ export function HelpPage() {
         <div className="bg-gray-50 py-16">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="font-['Lora'] mb-4">Still Need Help?</h2>
-              <p className="text-gray-600">Our support team is here to assist you</p>
+              <h2 className="font-['Lora'] mb-4">Vẫn cần trợ giúp?</h2>
+              <p className="text-gray-600">Đội ngũ hỗ trợ của chúng tôi luôn sẵn sàng hỗ trợ bạn</p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
@@ -165,27 +165,27 @@ export function HelpPage() {
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <MessageCircle className="w-8 h-8 text-blue-600" />
                 </div>
-                <h3 className="font-['Lato'] uppercase tracking-wider mb-2">Live Chat</h3>
-                <p className="text-sm text-gray-600 mb-4">Chat with our team</p>
-                <p className="text-sm font-medium text-[#ca6946]">Available 9AM - 6PM</p>
+                <h3 className="font-['Lato'] uppercase tracking-wider mb-2">Trò chuyện trực tiếp</h3>
+                <p className="text-sm text-gray-600 mb-4">Trò chuyện với đội ngũ của chúng tôi</p>
+                <p className="text-sm font-medium text-[#ca6946]">Có sẵn 9AM - 6PM</p>
               </a>
 
               <a href="mailto:support@sustainique.com" className="bg-white rounded-xl p-8 text-center hover:shadow-xl transition-all">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Mail className="w-8 h-8 text-green-600" />
                 </div>
-                <h3 className="font-['Lato'] uppercase tracking-wider mb-2">Email Us</h3>
+                <h3 className="font-['Lato'] uppercase tracking-wider mb-2">Gửi Email</h3>
                 <p className="text-sm text-gray-600 mb-4">support@sustainique.com</p>
-                <p className="text-sm font-medium text-[#ca6946]">Response within 24hrs</p>
+                <p className="text-sm font-medium text-[#ca6946]">Phản hồi trong 24 giờ</p>
               </a>
 
               <a href="tel:+841234567890" className="bg-white rounded-xl p-8 text-center hover:shadow-xl transition-all">
                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Phone className="w-8 h-8 text-orange-600" />
                 </div>
-                <h3 className="font-['Lato'] uppercase tracking-wider mb-2">Call Us</h3>
+                <h3 className="font-['Lato'] uppercase tracking-wider mb-2">Gọi điện</h3>
                 <p className="text-sm text-gray-600 mb-4">+84 123 456 789</p>
-                <p className="text-sm font-medium text-[#ca6946]">Mon-Fri 9AM - 6PM</p>
+                <p className="text-sm font-medium text-[#ca6946]">Thứ 2-Thứ 6 9AM - 6PM</p>
               </a>
             </div>
           </div>
@@ -193,9 +193,9 @@ export function HelpPage() {
 
         {/* Popular Topics */}
         <div className="max-w-7xl mx-auto px-4 py-16">
-          <h3 className="font-['Lato'] uppercase tracking-wider text-center mb-8">Popular Topics</h3>
+          <h3 className="font-['Lato'] uppercase tracking-wider text-center mb-8">Chủ đề phổ biến</h3>
           <div className="flex flex-wrap justify-center gap-3">
-            {['Size Guide', 'Shipping Info', 'Custom Orders', 'Green Certifications', 'Return Policy', 'Green Points', 'Payment Methods', 'Account Settings'].map((topic) => (
+            {['Hướng dẫn size', 'Thông tin vận chuyển', 'Đơn hàng tùy chỉnh', 'Chứng nhận Xanh', 'Chính sách đổi trả', 'Điểm Xanh', 'Phương thức thanh toán', 'Cài đặt tài khoản'].map((topic) => (
               <button
                 key={topic}
                 className="px-6 py-3 border-2 border-gray-300 rounded-full hover:border-[#ca6946] hover:text-[#ca6946] transition-all"
