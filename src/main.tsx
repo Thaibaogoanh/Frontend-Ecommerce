@@ -2,9 +2,14 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { Toaster } from "./components/ui/sonner";
 
 // Simple error boundary using functional component with error state
-function ErrorBoundary({ children }: { children: React.ReactNode }) {
+type ErrorBoundaryProps = {
+  children: React.ReactNode;
+};
+
+function ErrorBoundary({ children }: ErrorBoundaryProps) {
   const [error, setError] = React.useState<Error | null>(null);
 
   React.useEffect(() => {
@@ -51,9 +56,12 @@ try {
   const root = createRoot(rootElement);
   console.log("Root created, rendering App...");
   root.render(
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    <ErrorBoundary children={
+      <React.Fragment>
+        <App />
+        <Toaster position="top-right" richColors />
+      </React.Fragment>
+    } />
   );
   console.log("App rendered successfully");
 } catch (error) {

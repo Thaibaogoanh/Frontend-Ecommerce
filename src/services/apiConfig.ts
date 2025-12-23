@@ -31,6 +31,7 @@ export const API_ENDPOINTS = {
     REGISTER: `${API_BASE_URL}/auth/register`,
     LOGIN: `${API_BASE_URL}/auth/login`,
     FORGOT_PASSWORD: `${API_BASE_URL}/auth/forgot-password`,
+    CHANGE_PASSWORD: `${API_BASE_URL}/auth/change-password`,
   },
 
   // ==================
@@ -121,6 +122,12 @@ export const API_ENDPOINTS = {
     GET_HISTORY: `${API_BASE_URL}/rewards/history`,
     GET_CATALOG: `${API_BASE_URL}/rewards/catalog`,
     REDEEM: (rewardId: string) => `${API_BASE_URL}/rewards/redeem/${rewardId}`,
+    // Admin catalog endpoints (if available)
+    CATALOG_GET_ALL: `${API_BASE_URL}/rewards/catalog`,
+    CATALOG_GET_BY_ID: (id: string) => `${API_BASE_URL}/rewards/catalog/${id}`,
+    CATALOG_CREATE: `${API_BASE_URL}/rewards/catalog`,
+    CATALOG_UPDATE: (id: string) => `${API_BASE_URL}/rewards/catalog/${id}`,
+    CATALOG_DELETE: (id: string) => `${API_BASE_URL}/rewards/catalog/${id}`,
   },
 
   // ==================
@@ -129,6 +136,12 @@ export const API_ENDPOINTS = {
   VOUCHERS: {
     MY_VOUCHERS: `${API_BASE_URL}/vouchers/my-vouchers`,
     VALIDATE: `${API_BASE_URL}/vouchers/validate`,
+    // Admin endpoints (if available)
+    GET_ALL: `${API_BASE_URL}/vouchers`,
+    GET_BY_ID: (id: string) => `${API_BASE_URL}/vouchers/${id}`,
+    CREATE: `${API_BASE_URL}/vouchers`,
+    UPDATE: (id: string) => `${API_BASE_URL}/vouchers/${id}`,
+    DELETE: (id: string) => `${API_BASE_URL}/vouchers/${id}`,
   },
 
   // ==================
@@ -140,6 +153,15 @@ export const API_ENDPOINTS = {
     GET_DASHBOARD_STATS: `${API_BASE_URL}/users/dashboard/stats`,
     GET_RECENT_ORDERS: `${API_BASE_URL}/users/dashboard/recent-orders`,
     GET_TREES_PLANTED: `${API_BASE_URL}/users/dashboard/trees-planted`,
+    // Admin endpoints
+    GET_ALL: `${API_BASE_URL}/users`,
+    GET_BY_ID: (id: string) => `${API_BASE_URL}/users/${id}`,
+    CREATE: `${API_BASE_URL}/users`,
+    UPDATE: (id: string) => `${API_BASE_URL}/users/${id}`,
+    ACTIVATE: (id: string) => `${API_BASE_URL}/users/${id}/activate`,
+    DEACTIVATE: (id: string) => `${API_BASE_URL}/users/${id}/deactivate`,
+    DELETE: (id: string) => `${API_BASE_URL}/users/${id}`,
+    GET_STATS: `${API_BASE_URL}/users/stats`,
   },
 
   // ==================
@@ -281,6 +303,18 @@ export const API_ENDPOINTS = {
     GET_STATUS: (paymentId: string) => `${API_BASE_URL}/payments/${paymentId}/status`,
     CANCEL: (paymentId: string) => `${API_BASE_URL}/payments/${paymentId}/cancel`,
     CALLBACK_VNPAY: `${API_BASE_URL}/payments/callback/vnpay`,
+  },
+
+  // ==================
+  // PAYMENT METHODS ENDPOINTS
+  // ==================
+  PAYMENT_METHODS: {
+    GET_ALL: `${API_BASE_URL}/payment-methods`,
+    GET_BY_ID: (id: string) => `${API_BASE_URL}/payment-methods/${id}`,
+    CREATE: `${API_BASE_URL}/payment-methods`,
+    UPDATE: (id: string) => `${API_BASE_URL}/payment-methods/${id}`,
+    DELETE: (id: string) => `${API_BASE_URL}/payment-methods/${id}`,
+    SET_DEFAULT: (id: string) => `${API_BASE_URL}/payment-methods/${id}/set-default`,
   },
 };
 
@@ -450,6 +484,12 @@ export const apiServices = {
         method: "POST",
         body: JSON.stringify({ email }),
       }),
+
+    changePassword: (data: { currentPassword: string; newPassword: string; confirmPassword: string }, token: string) =>
+      apiFetch(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }, token),
   },
 
   // Products Services
@@ -507,15 +547,29 @@ export const apiServices = {
 
   // Designs Services
   designs: {
-    getAll: (page = 1, limit = 10) => {
+    getAll: (page = 1, limit = 10, params?: Record<string, any>) => {
       const offset = (page - 1) * limit;
-      return apiFetch(`${API_ENDPOINTS.DESIGNS.GET_ALL}?limit=${limit}&offset=${offset}`);
+      const query = new URLSearchParams({
+        limit: limit.toString(),
+        offset: offset.toString(),
+        ...params,
+      });
+      return apiFetch(`${API_ENDPOINTS.DESIGNS.GET_ALL}?${query}`);
     },
 
     getTrending: (limit = 10) =>
       apiFetch(`${API_ENDPOINTS.DESIGNS.GET_TRENDING}?limit=${limit}`),
 
     getById: (id: string) => apiFetch(API_ENDPOINTS.DESIGNS.GET_BY_ID(id)),
+    
+    search: (query: string, limit = 10) =>
+      apiFetch(`${API_ENDPOINTS.DESIGNS.GET_ALL}?search=${encodeURIComponent(query)}&limit=${limit}`),
+    
+    filterByCategory: (category: string, limit = 10) =>
+      apiFetch(`${API_ENDPOINTS.DESIGNS.GET_ALL}?category=${encodeURIComponent(category)}&limit=${limit}`),
+    
+    filterByTags: (tags: string[], limit = 10) =>
+      apiFetch(`${API_ENDPOINTS.DESIGNS.GET_ALL}?tags=${encodeURIComponent(tags.join(','))}&limit=${limit}`),
   },
 
   // Cart Services
@@ -666,6 +720,65 @@ export const apiServices = {
 
     getTreesPlanted: (token: string) =>
       apiFetch(API_ENDPOINTS.USERS.GET_TREES_PLANTED, undefined, token),
+
+    // Admin services
+    getAll: (token: string, params?: any) => {
+      const queryString = params
+        ? "?" + new URLSearchParams(params).toString()
+        : "";
+      return apiFetch(
+        API_ENDPOINTS.USERS.GET_ALL + queryString,
+        undefined,
+        token
+      );
+    },
+
+    getById: (id: string, token: string) =>
+      apiFetch(API_ENDPOINTS.USERS.GET_BY_ID(id), undefined, token),
+
+    create: (data: any, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.USERS.CREATE,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        },
+        token
+      ),
+
+    update: (id: string, data: any, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.USERS.UPDATE(id),
+        {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        },
+        token
+      ),
+
+    activate: (id: string, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.USERS.ACTIVATE(id),
+        {
+          method: "PATCH",
+        },
+        token
+      ),
+
+    deactivate: (id: string, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.USERS.DEACTIVATE(id),
+        {
+          method: "PATCH",
+        },
+        token
+      ),
+
+    delete: (id: string, token: string) =>
+      apiFetch(API_ENDPOINTS.USERS.DELETE(id), { method: "DELETE" }, token),
+
+    getStats: (token: string) =>
+      apiFetch(API_ENDPOINTS.USERS.GET_STATS, undefined, token),
   },
 
   // Contact Services
@@ -830,6 +943,44 @@ export const apiServices = {
         token
       );
     },
+
+    // Admin services (if available)
+    getAll: (token: string, params?: any) => {
+      const queryString = params
+        ? "?" + new URLSearchParams(params).toString()
+        : "";
+      return apiFetch(
+        API_ENDPOINTS.VOUCHERS.GET_ALL + queryString,
+        undefined,
+        token
+      );
+    },
+
+    getById: (id: string, token: string) =>
+      apiFetch(API_ENDPOINTS.VOUCHERS.GET_BY_ID(id), undefined, token),
+
+    create: (data: any, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.VOUCHERS.CREATE,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        },
+        token
+      ),
+
+    update: (id: string, data: any, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.VOUCHERS.UPDATE(id),
+        {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        },
+        token
+      ),
+
+    delete: (id: string, token: string) =>
+      apiFetch(API_ENDPOINTS.VOUCHERS.DELETE(id), { method: "DELETE" }, token),
   },
 
   // Rewards Services
@@ -857,6 +1008,40 @@ export const apiServices = {
         {
           method: "POST",
         },
+        token
+      ),
+
+    // Admin catalog services (if available)
+    catalogGetAll: (token: string) =>
+      apiFetch(API_ENDPOINTS.REWARDS.CATALOG_GET_ALL, undefined, token),
+
+    catalogGetById: (id: string, token: string) =>
+      apiFetch(API_ENDPOINTS.REWARDS.CATALOG_GET_BY_ID(id), undefined, token),
+
+    catalogCreate: (data: any, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.REWARDS.CATALOG_CREATE,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        },
+        token
+      ),
+
+    catalogUpdate: (id: string, data: any, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.REWARDS.CATALOG_UPDATE(id),
+        {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        },
+        token
+      ),
+
+    catalogDelete: (id: string, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.REWARDS.CATALOG_DELETE(id),
+        { method: "DELETE" },
         token
       ),
   },
@@ -1156,6 +1341,51 @@ export const apiServices = {
       ),
     getDisposals: (id: string, token: string) =>
       apiFetch(API_ENDPOINTS.ASSETS.GET_DISPOSALS(id), undefined, token),
+  },
+
+  // Payment Methods Services
+  paymentMethods: {
+    getAll: (token: string) =>
+      apiFetch(API_ENDPOINTS.PAYMENT_METHODS.GET_ALL, undefined, token),
+
+    getById: (id: string, token: string) =>
+      apiFetch(API_ENDPOINTS.PAYMENT_METHODS.GET_BY_ID(id), undefined, token),
+
+    create: (data: any, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.PAYMENT_METHODS.CREATE,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        },
+        token
+      ),
+
+    update: (id: string, data: any, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.PAYMENT_METHODS.UPDATE(id),
+        {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        },
+        token
+      ),
+
+    delete: (id: string, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.PAYMENT_METHODS.DELETE(id),
+        { method: "DELETE" },
+        token
+      ),
+
+    setDefault: (id: string, token: string) =>
+      apiFetch(
+        API_ENDPOINTS.PAYMENT_METHODS.SET_DEFAULT(id),
+        {
+          method: "PATCH",
+        },
+        token
+      ),
   },
 
   // Admin Services (require admin role)

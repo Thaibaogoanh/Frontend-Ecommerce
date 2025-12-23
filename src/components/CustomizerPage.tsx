@@ -5,7 +5,7 @@ import { Slider } from './ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import {
   Upload, Type, Image as ImageIcon, RotateCw, Trash2,
-  ShoppingCart, ChevronRight, Leaf, ZoomIn, ZoomOut,
+  ShoppingCart, ChevronRight, Leaf, ZoomIn, ZoomOut, Save,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { Rnd } from 'react-rnd';
@@ -48,6 +48,8 @@ export function CustomizerPage() {
   const [calculatedPrice, setCalculatedPrice] = useState(0);
   const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
   const [showPrintArea, setShowPrintArea] = useState(false); // Ẩn Print Area mặc định
+  const [savedDesigns, setSavedDesigns] = useState<any[]>([]);
+  const [loadingSavedDesigns, setLoadingSavedDesigns] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Text settings
@@ -64,18 +66,39 @@ export function CustomizerPage() {
 
   // Tính giá tiền
   useEffect(() => {
-    if (!product || !selectedColor?.hex || !selectedSize) return;
+    if (!product || !selectedColor || !selectedSize) return;
     const fetchPrice = async () => {
       try {
         setIsCalculatingPrice(true);
+        
+        // Validate và filter các element hợp lệ
+        const validElements = canvasElements.filter((el) => {
+          if (el.type === 'text') {
+            return el.content && el.content.trim().length > 0;
+          } else if (el.type === 'design' || el.type === 'image') {
+            return el.content && el.content.length > 0;
+          }
+          return false;
+        });
+        
+        // Use ColorCode for SKU variant lookup
+        const colorCode = selectedColor.ColorCode || selectedColor.name || 'BLACK';
+        
+        console.log('🎨 Calculating price:', {
+          productId: product.id,
+          selectedColor,
+          colorCode,
+          sizeCode: selectedSize,
+        });
+        
         const res = await apiServices.customizer.calculatePrice({
           productId: product.id,
-          colorCode: selectedColor.hex,
+          colorCode: colorCode,
           sizeCode: selectedSize,
           quantity: 1,
           canvasData: {
-            elements: canvasElements,
-            selectedColor: selectedColor.hex,
+            elements: validElements.length > 0 ? validElements : [],
+            selectedColor: selectedColor.hex || '#000000',
             selectedSize: selectedSize,
             quantity: 1,
           },
@@ -125,16 +148,37 @@ export function CustomizerPage() {
       setDesignCategories(groupDesignsByCategory(designsList));
 
       // Set default variants
-      if (productData.skuVariants?.length > 0) {
-        const firstVariant = productData.skuVariants[0];
-        setSelectedSize(firstVariant.size || 'M');
-        if (productData.colors?.length > 0) {
-          setSelectedColor(productData.colors[0]);
-        } else if (firstVariant.color) {
-          setSelectedColor({ name: firstVariant.color, hex: '#000000' });
-        }
-      } else if (productData.colors?.length > 0) {
+      console.log('📦 Product data:', {
+        colors: productData.colors,
+        skuVariants: productData.skuVariants,
+        productId: productData.id,
+      });
+      
+      // Set color - with fallback to default
+      if (productData.colors?.length > 0) {
+        // Use first color from colors array
+        console.log('✅ Setting first color from API:', productData.colors[0]);
         setSelectedColor(productData.colors[0]);
+      } else {
+        // Fallback - create a default color object
+        console.warn('⚠️ No colors from API, using fallback');
+        setSelectedColor({ 
+          ColorCode: 'BLACK', 
+          ColorName: 'Black', 
+          hex: '#000000' 
+        } as any);
+      }
+      
+      // Set size
+      if (productData.skuVariants?.length > 0) {
+        // Extract first size from SKU variants
+        const firstVariant = productData.skuVariants[0];
+        console.log('✅ Setting first size:', firstVariant.SizeCode);
+        setSelectedSize(firstVariant.SizeCode || 'M');
+      } else {
+        // Fallback to default size
+        console.warn('⚠️ No SKU variants from API, using default size M');
+        setSelectedSize('M');
       }
     } catch (err) {
       console.error(err);
@@ -173,10 +217,15 @@ export function CustomizerPage() {
   };
 
   const addDesign = (design: any) => {
+    // Validate design has an image
+    if (!design.image || design.image.trim() === '') {
+      alert('Hình ảnh thiết kế không hợp lệ');
+      return;
+    }
     const newElement: CanvasElement = {
       id: `design-${Date.now()}`,
       type: 'design',
-      content: design.image,
+      content: design.image || design.preview_url || 'https://placehold.co/100x100',
       x: 20, y: 20, width: 100, height: 100, rotation: 0,
     };
     setCanvasElements([...canvasElements, newElement]);
@@ -237,13 +286,24 @@ export function CustomizerPage() {
 
     try {
       const previewImage = await capturePreview();
+      
+      // Validate và filter các element hợp lệ
+      const validElements = canvasElements.filter((el) => {
+        if (el.type === 'text') {
+          return el.content && el.content.trim().length > 0;
+        } else if (el.type === 'design' || el.type === 'image') {
+          return el.content && el.content.length > 0;
+        }
+        return false;
+      });
+      
       const customDesignData =
-        canvasElements.length > 0
+        validElements.length > 0
           ? {
-              elements: canvasElements.map((el) => ({
+              elements: validElements.map((el) => ({
                 id: el.id,
                 type: el.type,
-                content: el.content,
+                content: el.content || '',
                 x: el.x,
                 y: el.y,
                 width: el.width,
@@ -262,11 +322,14 @@ export function CustomizerPage() {
             }
           : undefined;
 
+      // Use ColorCode for SKU variant lookup
+      const colorCode = selectedColor.ColorCode || selectedColor.name || 'BLACK';
+      
       await apiServices.cart.addItem(
         {
           productId: product.id,
           quantity: 1,
-          colorCode: selectedColor.hex,
+          colorCode: colorCode,
           sizeCode: selectedSize,
           customDesignData: customDesignData,
         },
@@ -318,14 +381,27 @@ export function CustomizerPage() {
         return; // User cancelled
       }
 
+      // Validate và filter các element hợp lệ
+      const validElements = canvasElements.filter((el) => {
+        if (el.type === 'text') {
+          return el.content && el.content.trim().length > 0;
+        } else if (el.type === 'design' || el.type === 'image') {
+          return el.content && el.content.length > 0;
+        }
+        return false;
+      });
+      
+      // Use ColorCode for SKU variant lookup
+      const colorCode = selectedColor.ColorCode || selectedColor.name || 'BLACK';
+      
       const saveData = {
         productId: product.id,
         name: designName.trim() || `Design ${new Date().toLocaleDateString('vi-VN')}`,
         canvasData: {
-          elements: canvasElements.map((el) => ({
+          elements: validElements.map((el) => ({
             id: el.id,
             type: el.type,
-            content: el.content,
+            content: el.content || '',
             x: el.x,
             y: el.y,
             width: el.width,
@@ -335,13 +411,13 @@ export function CustomizerPage() {
             fontFamily: el.fontFamily,
             color: el.color || textColor,
             textAlign: el.textAlign || textAlign,
-            designId: el.type === 'design' ? el.content : undefined, // If design type, content might be designId
+            designId: el.type === 'design' ? el.content : undefined,
           })),
-          selectedColor: selectedColor.hex,
+          selectedColor: selectedColor.hex || '#000000',
           selectedSize: selectedSize,
           quantity: 1,
         },
-        colorCode: selectedColor.hex,
+        colorCode: colorCode,
         sizeCode: selectedSize,
         quantity: 1,
       };
@@ -360,6 +436,58 @@ export function CustomizerPage() {
         err?.message ||
         'Không thể lưu thiết kế. Vui lòng thử lại.';
       alert(`❌ ${errorMessage}`);
+    }
+  };
+
+  // Load saved designs
+  const loadSavedDesigns = async () => {
+    if (!token) return;
+    try {
+      setLoadingSavedDesigns(true);
+      const response = await apiServices.customizer.getSavedDesigns(token) as any;
+      setSavedDesigns(response.savedDesigns || response || []);
+    } catch (err) {
+      console.error('Error loading saved designs:', err);
+    } finally {
+      setLoadingSavedDesigns(false);
+    }
+  };
+
+  // Load saved design into editor
+  const loadSavedDesign = async (designId: string) => {
+    try {
+      const response = await apiServices.customizer.getSavedDesignById(designId, token!) as any;
+      const design = response.savedDesign || response;
+      
+      if (design.canvasData?.elements) {
+        setCanvasElements(design.canvasData.elements);
+        if (design.canvasData.selectedColor) {
+          // Find and set the color
+          const color = product?.colors?.find((c: any) => c.hex === design.canvasData.selectedColor);
+          if (color) setSelectedColor(color);
+        }
+        if (design.canvasData.selectedSize) {
+          setSelectedSize(design.canvasData.selectedSize);
+        }
+        alert('✅ Đã tải thiết kế thành công!');
+      }
+    } catch (err) {
+      alert('❌ Không thể tải thiết kế');
+      console.error('Error loading saved design:', err);
+    }
+  };
+
+  // Delete saved design
+  const deleteSavedDesign = async (designId: string) => {
+    if (!window.confirm('Bạn chắc chắn muốn xóa thiết kế này?')) return;
+    
+    try {
+      await apiServices.customizer.deleteSavedDesign(designId, token!);
+      setSavedDesigns(savedDesigns.filter(d => (d.id || d.DESIGN_ID) !== designId));
+      alert('✅ Đã xóa thiết kế thành công!');
+    } catch (err) {
+      alert('❌ Không thể xóa thiết kế');
+      console.error('Error deleting saved design:', err);
     }
   };
 
@@ -385,12 +513,18 @@ export function CustomizerPage() {
         
         {/* === SIDEBAR TRÁI: CÔNG CỤ === */}
         <aside className="w-[320px] flex flex-col border-r bg-white z-20">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col">
+          <Tabs value={activeTab} onValueChange={(val) => {
+            setActiveTab(val);
+            if (val === 'saved') {
+              loadSavedDesigns();
+            }
+          }} className="w-full flex-1 flex flex-col">
             <div className="px-2 pt-2 border-b">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="upload"><Upload className="w-4 h-4" /></TabsTrigger>
                 <TabsTrigger value="text"><Type className="w-4 h-4" /></TabsTrigger>
                 <TabsTrigger value="designs"><ImageIcon className="w-4 h-4" /></TabsTrigger>
+                <TabsTrigger value="saved"><Save className="w-4 h-4" /></TabsTrigger>
               </TabsList>
             </div>
             
@@ -440,6 +574,45 @@ export function CustomizerPage() {
                     </div>
                   </div>
                 ))}
+              </TabsContent>
+
+              <TabsContent value="saved" className="mt-0 space-y-4">
+                {loadingSavedDesigns ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500">Đang tải...</p>
+                  </div>
+                ) : savedDesigns.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Save className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm text-gray-500">Chưa có thiết kế đã lưu</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {savedDesigns.map((design: any) => (
+                      <div key={design.id || design.DESIGN_ID} className="border rounded-lg p-3 hover:bg-gray-50">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1">
+                            <h4 className="text-sm font-semibold truncate">{design.name}</h4>
+                            <p className="text-xs text-gray-500">{new Date(design.createdAt).toLocaleDateString('vi-VN')}</p>
+                          </div>
+                          <button
+                            onClick={() => deleteSavedDesign(design.id || design.DESIGN_ID)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                            title="Xóa"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => loadSavedDesign(design.id || design.DESIGN_ID)}
+                          className="w-full mt-2 bg-black text-white text-xs py-2 rounded hover:bg-gray-800 transition"
+                        >
+                          Tải thiết kế này
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
             </div>
           </Tabs>
@@ -565,23 +738,23 @@ export function CustomizerPage() {
         </section>
 
         {/* === SIDEBAR PHẢI: THÔNG TIN === */}
-        <aside className="hidden md:flex w-[300px] flex-col border-l bg-white z-20 shadow-sm">
-           <div className="p-5 space-y-5 flex-1 overflow-y-auto">
+        <aside className="w-[280px] md:w-[300px] flex flex-col border-l bg-white z-20 shadow-sm overflow-hidden">
+           <div className="p-4 md:p-5 space-y-4 md:space-y-5 flex-1 overflow-y-auto">
               {/* Product Info */}
-              <div className="border-b pb-4">
-                 <h2 className="text-lg font-bold text-gray-900 mb-1">{product.name}</h2>
-                 <p className="text-sm text-gray-500">SKU: {product.sku || 'N/A'}</p>
+              <div className="border-b pb-3 md:pb-4">
+                 <h2 className="text-base md:text-lg font-bold text-gray-900 mb-1">{product.name}</h2>
+                 <p className="text-xs md:text-sm text-gray-500">SKU: {product.sku || 'N/A'}</p>
               </div>
 
               {/* Chọn Màu */}
               <div>
                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide block mb-3">Màu sắc</label>
-                 <div className="flex gap-2.5 flex-wrap">
+                 <div className="flex gap-2 flex-wrap">
                     {(product.colors || [{hex:'#000', name:'Default'}]).map((c: any, i: number) => (
                        <button 
                          key={i} 
                          onClick={() => setSelectedColor(c)}
-                         className={`w-9 h-9 rounded-full border-2 transition-all ${selectedColor?.name === c.name ? 'ring-2 ring-offset-2 ring-gray-900 scale-110 border-gray-900' : 'border-gray-300 hover:border-gray-400'}`}
+                         className={`w-8 h-8 md:w-9 md:h-9 rounded-full border-2 transition-all ${selectedColor?.name === c.name ? 'ring-2 ring-offset-2 ring-gray-900 scale-110 border-gray-900' : 'border-gray-300 hover:border-gray-400'}`}
                          style={{ backgroundColor: c.hex }}
                          title={c.name}
                        />
@@ -592,12 +765,12 @@ export function CustomizerPage() {
               {/* Chọn Size */}
               <div>
                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide block mb-3">Kích thước</label>
-                 <div className="grid grid-cols-4 gap-2">
+                 <div className="grid grid-cols-4 gap-1.5 md:gap-2">
                     {['S','M','L','XL'].map(s => (
                        <button 
                          key={s} 
                          onClick={() => setSelectedSize(s)}
-                         className={`h-10 rounded-md border-2 font-semibold text-sm transition-all ${selectedSize === s ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'}`}
+                         className={`h-9 md:h-10 rounded-md border-2 font-semibold text-xs md:text-sm transition-all ${selectedSize === s ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'}`}
                        >
                          {s}
                        </button>
@@ -702,24 +875,24 @@ export function CustomizerPage() {
            </div>
 
            {/* Footer Action */}
-           <div className="p-5 border-t bg-gray-50 space-y-3 sticky bottom-0">
-              <div className="flex justify-between items-end pb-2">
-                 <span className="text-sm font-medium text-gray-700">Tổng tiền:</span>
+           <div className="p-3 md:p-5 border-t bg-gray-50 space-y-2 md:space-y-3 sticky bottom-0">
+              <div className="flex justify-between items-end pb-1 md:pb-2">
+                 <span className="text-xs md:text-sm font-medium text-gray-700">Tổng tiền:</span>
                  {isCalculatingPrice ? (
-                    <span className="text-sm text-gray-500 animate-pulse">Đang tính...</span>
+                    <span className="text-xs md:text-sm text-gray-500 animate-pulse">Đang tính...</span>
                  ) : (
-                    <span className="text-xl font-bold text-gray-900">{totalPrice.toLocaleString('vi-VN')}₫</span>
+                    <span className="text-lg md:text-xl font-bold text-gray-900">{totalPrice.toLocaleString('vi-VN')}₫</span>
                  )}
               </div>
               <button 
                  onClick={handleAddToCart}
-                 className="w-full bg-[#ca6946] hover:bg-[#b05a3b] text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-md transition-all"
+                 className="w-full bg-[#ca6946] hover:bg-[#b05a3b] text-white py-2.5 md:py-3 rounded-lg font-bold text-sm md:text-base flex items-center justify-center gap-2 shadow-md transition-all"
               >
                  <ShoppingCart className="w-4 h-4"/> Thêm vào giỏ hàng
               </button>
               <button 
                  onClick={handleSaveDesign} 
-                 className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2.5 rounded-lg font-medium text-sm transition-all"
+                 className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 md:py-2.5 rounded-lg font-medium text-xs md:text-sm transition-all"
               >
                  Lưu thiết kế
               </button>

@@ -40,6 +40,7 @@ import { apiServices } from '../../services/apiConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { Loading } from '../ui/loading';
 import { ErrorDisplay } from '../ui/error';
+import { toast } from "sonner";
 
 const mockOrders = [
   { id: "ORD-2024-156", customer: "Nguyễn Văn A", date: "2024-11-07", status: "Processing", total: 749000, items: 1 },
@@ -77,6 +78,14 @@ export function AdminDashboard() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [assets, setAssets] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [vouchers, setVouchers] = useState<any[]>([]);
+  const [rewardCatalog, setRewardCatalog] = useState<any[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  
+  // Filter states for users
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<string>('all');
 
   // Dialog states
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -112,6 +121,29 @@ export function AdminDashboard() {
       if (!token) return;
 
       // Load all data in parallel
+      const results = await Promise.all([
+        apiServices.orders.getAll(token).catch(() => ({ orders: [] })),
+        apiServices.products.getAll(1, 100).catch(() => ({ products: [] })),
+        apiServices.designs.getAll(1, 100).catch(() => ({ designs: [] })),
+        apiServices.inventory.getStock(token).catch(() => ({ stock: [] })),
+        apiServices.packaging.getAll(token).catch(() => ({ packaging: [] })),
+        apiServices.sizes.getAll(token).catch(() => ({ sizes: [] })),
+        apiServices.materials.getAll(token).catch(() => ({ materials: [] })),
+        apiServices.printMethods.getAll(token).catch(() => ({ printMethods: [] })),
+        apiServices.returnReasons.getAll(token).catch(() => ({ returnReasons: [] })),
+        apiServices.employees.getAll(token).catch(() => ({ employees: [] })),
+        apiServices.assets.getAll(token).catch(() => ({ assets: [] })),
+        apiServices.categories.getAll().catch(() => []),
+        // Admin user list
+        apiServices.users.getAll(token, { page: 1, limit: 100 }).catch(() => ({ users: [], total: 0 })),
+        // Vouchers admin (if available)
+        apiServices.vouchers.getAll(token).catch(() => []),
+        // Reward catalog admin (if available)
+        apiServices.rewards.catalogGetAll(token).catch(() => []),
+        // Payment methods
+        apiServices.paymentMethods.getAll(token).catch(() => []),
+      ]);
+
       const [
         ordersData,
         productsData,
@@ -124,21 +156,12 @@ export function AdminDashboard() {
         returnReasonsData,
         employeesData,
         assetsData,
-        categoriesData
-      ] = await Promise.all([
-        apiServices.orders.getAll(token).catch(() => ({ orders: [] })),
-        apiServices.products.getAll(1, 100).catch(() => ({ products: [] })),
-        apiServices.designs.getAll(1, 100).catch(() => ({ designs: [] })),
-        apiServices.inventory.getStock(token).catch(() => ({ stock: [] })),
-        apiServices.packaging.getAll(token).catch(() => ({ packaging: [] })),
-        apiServices.sizes.getAll(token).catch(() => ({ sizes: [] })),
-        apiServices.materials.getAll(token).catch(() => ({ materials: [] })),
-        apiServices.printMethods.getAll(token).catch(() => ({ printMethods: [] })),
-        apiServices.returnReasons.getAll(token).catch(() => ({ returnReasons: [] })),
-        apiServices.employees.getAll(token).catch(() => ({ employees: [] })),
-        apiServices.assets.getAll(token).catch(() => ({ assets: [] })),
-        apiServices.categories.getAll().catch(() => [])
-      ]);
+        categoriesData,
+        usersData,
+        vouchersData,
+        rewardCatalogData,
+        paymentMethodsData,
+      ] = results as any[];
 
       const ordersList = ordersData.orders || ordersData || [];
       const productsList = productsData.products || [];
@@ -156,6 +179,10 @@ export function AdminDashboard() {
       setEmployees(employeesData.employees || employeesData || []);
       setAssets(assetsData.assets || assetsData || []);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+      setUsersList(usersData?.users || usersData || []);
+      setVouchers(Array.isArray(vouchersData) ? vouchersData : []);
+      setRewardCatalog(Array.isArray(rewardCatalogData) ? rewardCatalogData : []);
+      setPaymentMethods(Array.isArray(paymentMethodsData) ? paymentMethodsData : []);
 
       // Calculate stats
       const totalRevenue = ordersList.reduce((sum: number, o: any) => sum + (o.Total || o.total || 0), 0);
@@ -167,7 +194,9 @@ export function AdminDashboard() {
         co2Saved: 890
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu quản trị');
+      const msg = err instanceof Error ? err.message : 'Không thể tải dữ liệu quản trị';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -177,9 +206,12 @@ export function AdminDashboard() {
     try {
       if (!token) return;
       await apiServices.admin.updateOrderStatus(orderId, newStatus, token);
+      toast.success('Đã cập nhật trạng thái đơn hàng');
       await loadAdminData(); // Reload data
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể cập nhật đơn hàng');
+      const msg = err instanceof Error ? err.message : 'Không thể cập nhật đơn hàng';
+      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -187,9 +219,12 @@ export function AdminDashboard() {
     try {
       if (!token) return;
       await apiServices.admin.updateDesignStatus(designId, 'approved', token);
+      toast.success('Đã phê duyệt thiết kế');
       await loadAdminData(); // Reload data
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể phê duyệt thiết kế');
+      const msg = err instanceof Error ? err.message : 'Không thể phê duyệt thiết kế';
+      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -244,31 +279,45 @@ export function AdminDashboard() {
       // Validation
       if (dialogType === 'create') {
         if (!formData.name || !formData.name.trim()) {
-          setError('Vui lòng nhập tên sản phẩm');
+          const msg = 'Vui lòng nhập tên sản phẩm';
+          setError(msg);
+          toast.error(msg);
           return;
         }
         if (!formData.title || !formData.title.trim()) {
-          setError('Vui lòng nhập tiêu đề sản phẩm');
+          const msg = 'Vui lòng nhập tiêu đề sản phẩm';
+          setError(msg);
+          toast.error(msg);
           return;
         }
         if (!formData.description || !formData.description.trim()) {
-          setError('Vui lòng nhập mô tả sản phẩm');
+          const msg = 'Vui lòng nhập mô tả sản phẩm';
+          setError(msg);
+          toast.error(msg);
           return;
         }
         if (!formData.price || formData.price < 0) {
-          setError('Vui lòng nhập giá sản phẩm hợp lệ (>= 0)');
+          const msg = 'Vui lòng nhập giá sản phẩm hợp lệ (>= 0)';
+          setError(msg);
+          toast.error(msg);
           return;
         }
         if (!formData.categoryId) {
-          setError('Vui lòng chọn danh mục');
+          const msg = 'Vui lòng chọn danh mục';
+          setError(msg);
+          toast.error(msg);
           return;
         }
         if (!formData.stock || formData.stock < 0) {
-          setError('Vui lòng nhập tồn kho hợp lệ (>= 0)');
+          const msg = 'Vui lòng nhập tồn kho hợp lệ (>= 0)';
+          setError(msg);
+          toast.error(msg);
           return;
         }
         if (!formData.quantity || formData.quantity < 0) {
-          setError('Vui lòng nhập số lượng hợp lệ (>= 0)');
+          const msg = 'Vui lòng nhập số lượng hợp lệ (>= 0)';
+          setError(msg);
+          toast.error(msg);
           return;
         }
       }
@@ -284,14 +333,272 @@ export function AdminDashboard() {
       
       if (dialogType === 'create') {
         await apiServices.products.create(dataToSend, token);
+        toast.success('Đã tạo sản phẩm mới');
       } else if (dialogType === 'edit' && editingItem) {
         await apiServices.products.update(editingItem.id, dataToSend, token);
+        toast.success('Đã cập nhật sản phẩm');
       }
       
       await loadAdminData();
       handleCloseDialog();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể lưu sản phẩm');
+      const msg = err instanceof Error ? err.message : 'Không thể lưu sản phẩm';
+      setError(msg);
+      toast.error(msg);
+    }
+  };
+
+  // User CRUD handlers
+  const handleSaveUser = async () => {
+    try {
+      if (!token) return;
+      setError(null);
+      
+      if (!formData.email || !formData.email.trim()) {
+        const msg = 'Vui lòng nhập email';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      
+      const dataToSend: any = {
+        email: formData.email.trim(),
+        name: formData.name?.trim() || '',
+        phone: formData.phone?.trim() || '',
+        role: formData.role || 'user',
+        isActive: formData.isActive !== false,
+      };
+      
+      if (dialogType === 'create-user') {
+        if (!formData.password || formData.password.length < 6) {
+          const msg = 'Vui lòng nhập mật khẩu (tối thiểu 6 ký tự)';
+          setError(msg);
+          toast.error(msg);
+          return;
+        }
+        dataToSend.password = formData.password;
+        await apiServices.users.create(dataToSend, token);
+        toast.success('Đã tạo người dùng mới');
+      } else if (dialogType === 'edit-user' && editingItem) {
+        await apiServices.users.update(editingItem.id, dataToSend, token);
+        toast.success('Đã cập nhật người dùng');
+      }
+      
+      await loadAdminData();
+      handleCloseDialog();
+    } catch (err: any) {
+      const msg = err?.message || 'Không thể lưu người dùng';
+      setError(msg);
+      toast.error(msg);
+    }
+  };
+
+  // Voucher CRUD handlers
+  const handleSaveVoucher = async () => {
+    try {
+      if (!token) return;
+      setError(null);
+      
+      if (!formData.code || !formData.code.trim()) {
+        const msg = 'Vui lòng nhập mã voucher';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      if (!formData.value || formData.value <= 0) {
+        const msg = 'Vui lòng nhập giá trị giảm giá hợp lệ';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      
+      const dataToSend = {
+        code: formData.code.trim().toUpperCase(),
+        type: formData.type || 'PERCENTAGE',
+        value: Number(formData.value),
+        minOrderAmount: Number(formData.minOrderAmount) || 0,
+        maxUses: Number(formData.maxUses) || 100,
+        maxUsesPerUser: Number(formData.maxUsesPerUser) || 1,
+        validFrom: formData.validFrom ? new Date(formData.validFrom).toISOString() : new Date().toISOString(),
+        validUntil: formData.validUntil ? new Date(formData.validUntil).toISOString() : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        status: formData.status || 'ACTIVE',
+      };
+      
+      if (dialogType === 'create-voucher') {
+        await apiServices.vouchers.create(dataToSend, token);
+        toast.success('Đã tạo voucher mới');
+      } else if (dialogType === 'edit-voucher' && editingItem) {
+        await apiServices.vouchers.update(editingItem.id, dataToSend, token);
+        toast.success('Đã cập nhật voucher');
+      }
+      
+      await loadAdminData();
+      handleCloseDialog();
+    } catch (err: any) {
+      const msg = err?.message || 'Không thể lưu voucher. Backend có thể chưa hỗ trợ admin CRUD vouchers.';
+      setError(msg);
+      toast.error(msg);
+    }
+  };
+
+  // Material CRUD handlers
+  const handleSaveMaterial = async () => {
+    try {
+      if (!token) return;
+      setError(null);
+      
+      if (!formData.name || !formData.name.trim()) {
+        const msg = 'Vui lòng nhập tên chất liệu';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      
+      const dataToSend = {
+        name: formData.name.trim(),
+        description: formData.description?.trim() || '',
+        isActive: formData.isActive !== false,
+      };
+      
+      if (dialogType === 'create-material') {
+        await apiServices.materials.create(dataToSend, token);
+        toast.success('Đã thêm chất liệu mới');
+      } else if (dialogType === 'edit-material' && editingItem) {
+        await apiServices.materials.update(editingItem.id, dataToSend, token);
+        toast.success('Đã cập nhật chất liệu');
+      }
+      
+      await loadAdminData();
+      handleCloseDialog();
+    } catch (err: any) {
+      const msg = err?.message || 'Không thể lưu chất liệu';
+      setError(msg);
+      toast.error(msg);
+    }
+  };
+
+  // Print Method CRUD handlers
+  const handleSavePrintMethod = async () => {
+    try {
+      if (!token) return;
+      setError(null);
+      
+      if (!formData.name || !formData.name.trim()) {
+        const msg = 'Vui lòng nhập tên phương thức in';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      
+      const dataToSend = {
+        name: formData.name.trim(),
+        description: formData.description?.trim() || '',
+        isActive: formData.isActive !== false,
+      };
+      
+      if (dialogType === 'create-print-method') {
+        await apiServices.printMethods.create(dataToSend, token);
+        toast.success('Đã thêm phương thức in mới');
+      } else if (dialogType === 'edit-print-method' && editingItem) {
+        await apiServices.printMethods.update(editingItem.id, dataToSend, token);
+        toast.success('Đã cập nhật phương thức in');
+      }
+      
+      await loadAdminData();
+      handleCloseDialog();
+    } catch (err: any) {
+      const msg = err?.message || 'Không thể lưu phương thức in';
+      setError(msg);
+      toast.error(msg);
+    }
+  };
+
+  // Payment Method CRUD handlers
+  const handleSavePaymentMethod = async () => {
+    try {
+      if (!token) return;
+      setError(null);
+      
+      if (!formData.name || !formData.name.trim()) {
+        const msg = 'Vui lòng nhập tên phương thức thanh toán';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      if (!formData.type || !formData.type.trim()) {
+        const msg = 'Vui lòng chọn loại phương thức thanh toán';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      
+      const dataToSend = {
+        name: formData.name.trim(),
+        type: formData.type.trim(),
+        isActive: formData.isActive !== false,
+        isDefault: formData.isDefault || false,
+      };
+      
+      if (dialogType === 'create-payment-method') {
+        await apiServices.paymentMethods.create(dataToSend, token);
+        toast.success('Đã thêm phương thức thanh toán mới');
+      } else if (dialogType === 'edit-payment-method' && editingItem) {
+        await apiServices.paymentMethods.update(editingItem.id, dataToSend, token);
+        toast.success('Đã cập nhật phương thức thanh toán');
+      }
+      
+      await loadAdminData();
+      handleCloseDialog();
+    } catch (err: any) {
+      const msg = err?.message || 'Không thể lưu phương thức thanh toán';
+      setError(msg);
+      toast.error(msg);
+    }
+  };
+
+  // Reward Catalog CRUD handlers
+  const handleSaveReward = async () => {
+    try {
+      if (!token) return;
+      setError(null);
+      
+      if (!formData.name || !formData.name.trim()) {
+        const msg = 'Vui lòng nhập tên phần thưởng';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      if (!formData.pointsRequired || formData.pointsRequired <= 0) {
+        const msg = 'Vui lòng nhập số điểm yêu cầu hợp lệ';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      
+      const dataToSend = {
+        name: formData.name.trim(),
+        description: formData.description?.trim() || '',
+        pointsRequired: Number(formData.pointsRequired),
+        type: formData.type || 'voucher',
+        discountValue: Number(formData.discountValue) || 0,
+        minOrderAmount: Number(formData.minOrderAmount) || 0,
+        isActive: formData.isActive !== false,
+      };
+      
+      if (dialogType === 'create-reward') {
+        await apiServices.rewards.catalogCreate(dataToSend, token);
+        toast.success('Đã thêm phần thưởng mới');
+      } else if (dialogType === 'edit-reward' && editingItem) {
+        await apiServices.rewards.catalogUpdate(editingItem.id, dataToSend, token);
+        toast.success('Đã cập nhật phần thưởng');
+      }
+      
+      await loadAdminData();
+      handleCloseDialog();
+    } catch (err: any) {
+      const msg = err?.message || 'Không thể lưu phần thưởng. Backend có thể chưa hỗ trợ admin CRUD reward catalog.';
+      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -300,9 +607,12 @@ export function AdminDashboard() {
     try {
       if (!token) return;
       await apiServices.products.delete(productId, token);
+      toast.success('Đã xóa sản phẩm');
       await loadAdminData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể xóa sản phẩm');
+      const msg = err instanceof Error ? err.message : 'Không thể xóa sản phẩm';
+      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -895,35 +1205,80 @@ export function AdminDashboard() {
                 <TabsContent value="materials" className="mt-6">
                   <Card>
                     <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
                       <CardTitle>Chất liệu bền vững</CardTitle>
                       <CardDescription>Quản lý chất liệu thân thiện môi trường</CardDescription>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setDialogType('create-material');
+                            setEditingItem(null);
+                            setFormData({ name: '', description: '', isActive: true });
+                            setIsDialogOpen(true);
+                          }}
+                          className="bg-[#BCF181] hover:bg-[#a8d76d] text-black"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Thêm chất liệu
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
-                      <button className="flex items-center gap-2 mb-6 bg-[#BCF181] px-4 py-2 rounded hover:bg-[#a8d76d]">
-                        <Plus className="w-4 h-4" />
-                        Thêm chất liệu
-                      </button>
+                      {materials.length === 0 ? (
+                        <div className="text-center py-12 text-gray-500">
+                          Chưa có chất liệu nào. Hãy thêm chất liệu mới để bắt đầu.
+                        </div>
+                      ) : (
                       <div className="space-y-4">
-                        {['Organic Cotton', 'Recycled Polyester', 'Bamboo Blend'].map((material, index) => (
-                          <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                          {materials.map((material: any) => (
+                            <div key={material.id} className="flex items-center justify-between p-4 border rounded-lg">
                             <div className="flex items-center gap-3">
                               <Leaf className="w-5 h-5 text-green-700" />
                               <div>
-                                <p className="font-medium">{material}</p>
-                                <p className="text-sm text-gray-600">GOTS Certified</p>
+                                  <p className="font-medium">{material.name || material.materialName}</p>
+                                  <p className="text-sm text-gray-600">{material.description || 'Chất liệu thân thiện môi trường'}</p>
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <button className="p-2 hover:bg-gray-100 rounded">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setDialogType('edit-material');
+                                    setEditingItem(material);
+                                    setFormData({
+                                      name: material.name || material.materialName || '',
+                                      description: material.description || '',
+                                      isActive: material.isActive !== false,
+                                    });
+                                    setIsDialogOpen(true);
+                                  }}
+                                >
                                 <Edit className="w-4 h-4" />
-                              </button>
-                              <button className="p-2 hover:bg-red-100 text-red-600 rounded">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={async () => {
+                                    if (!confirm(`Bạn có chắc muốn xóa chất liệu ${material.name || material.materialName}?`)) return;
+                                    if (!token) return;
+                                    try {
+                                      await apiServices.materials.delete(material.id, token);
+                                      toast.success('Đã xóa chất liệu');
+                                      loadAdminData();
+                                    } catch (err: any) {
+                                      toast.error('Không thể xóa chất liệu: ' + (err?.message || 'Lỗi không xác định'));
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                </Button>
                             </div>
                           </div>
                         ))}
                       </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -931,32 +1286,77 @@ export function AdminDashboard() {
                 <TabsContent value="inks" className="mt-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Mực thân thiện môi trường</CardTitle>
-                      <CardDescription>Quản lý loại mực in</CardDescription>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle>Phương thức in</CardTitle>
+                          <CardDescription>Quản lý phương thức in thân thiện môi trường</CardDescription>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setDialogType('create-print-method');
+                            setEditingItem(null);
+                            setFormData({ name: '', description: '', isActive: true });
+                            setIsDialogOpen(true);
+                          }}
+                          className="bg-[#BCF181] hover:bg-[#a8d76d] text-black"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Thêm phương thức in
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
-                      <button className="flex items-center gap-2 mb-6 bg-[#BCF181] px-4 py-2 rounded hover:bg-[#a8d76d]">
-                        <Plus className="w-4 h-4" />
-                        Thêm loại mực
-                      </button>
+                      {printMethods.length === 0 ? (
+                        <div className="text-center py-12 text-gray-500">
+                          Chưa có phương thức in nào. Hãy thêm phương thức in mới để bắt đầu.
+                        </div>
+                      ) : (
                       <div className="space-y-4">
-                        {['Water-Based Ink', 'Plastisol (Eco)', 'Discharge Ink'].map((ink, index) => (
-                          <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                          {printMethods.map((method: any) => (
+                            <div key={method.id} className="flex items-center justify-between p-4 border rounded-lg">
                             <div>
-                              <p className="font-medium">{ink}</p>
-                              <p className="text-sm text-gray-600">Non-toxic, PVC-free</p>
+                                <p className="font-medium">{method.name || method.methodName}</p>
+                                <p className="text-sm text-gray-600">{method.description || 'Phương thức in thân thiện môi trường'}</p>
                             </div>
                             <div className="flex gap-2">
-                              <button className="p-2 hover:bg-gray-100 rounded">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setDialogType('edit-print-method');
+                                    setEditingItem(method);
+                                    setFormData({
+                                      name: method.name || method.methodName || '',
+                                      description: method.description || '',
+                                      isActive: method.isActive !== false,
+                                    });
+                                    setIsDialogOpen(true);
+                                  }}
+                                >
                                 <Edit className="w-4 h-4" />
-                              </button>
-                              <button className="p-2 hover:bg-red-100 text-red-600 rounded">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={async () => {
+                                    if (!confirm(`Bạn có chắc muốn xóa phương thức in ${method.name || method.methodName}?`)) return;
+                                    if (!token) return;
+                                    try {
+                                      await apiServices.printMethods.delete(method.id, token);
+                                      toast.success('Đã xóa phương thức in');
+                                      loadAdminData();
+                                    } catch (err: any) {
+                                      toast.error('Không thể xóa phương thức in: ' + (err?.message || 'Lỗi không xác định'));
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                </Button>
                             </div>
                           </div>
                         ))}
                       </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -978,31 +1378,101 @@ export function AdminDashboard() {
                 <TabsContent value="vouchers" className="mt-6">
                   <Card>
                     <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
                       <CardTitle>Quản lý Voucher</CardTitle>
+                          <CardDescription>Tạo và quản lý mã giảm giá</CardDescription>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setDialogType('create-voucher');
+                            setEditingItem(null);
+                            setFormData({
+                              code: '',
+                              type: 'PERCENTAGE',
+                              value: 0,
+                              minOrderAmount: 0,
+                              maxUses: 100,
+                              maxUsesPerUser: 1,
+                              validFrom: new Date().toISOString().split('T')[0],
+                              validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                              status: 'ACTIVE',
+                            });
+                            setIsDialogOpen(true);
+                          }}
+                          className="bg-[#ca6946] hover:bg-[#b55835] text-white"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Tạo Voucher
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
-                      <button className="flex items-center gap-2 mb-6 bg-[#ca6946] text-white px-4 py-2 rounded hover:bg-[#b55835]">
-                        <Plus className="w-4 h-4" />
-                        Tạo Voucher
-                      </button>
+                      {vouchers.length === 0 ? (
+                        <div className="text-center py-12 text-gray-500">
+                          <p>Chưa có voucher nào. Hãy tạo voucher mới để bắt đầu.</p>
+                          <p className="text-sm mt-2">Lưu ý: Backend có thể chưa hỗ trợ admin CRUD vouchers.</p>
+                        </div>
+                      ) : (
                       <div className="space-y-4">
-                        {['GREEN20', 'WELCOME10', 'FREESHIP'].map((code, index) => (
-                          <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                            <div>
-                              <p className="font-bold">{code}</p>
-                              <p className="text-sm text-gray-600">20% off • Expires: 2024-12-31</p>
+                          {vouchers.map((voucher: any) => (
+                            <div key={voucher.id} className="flex items-center justify-between p-4 border rounded-lg">
+                              <div className="flex-1">
+                                <p className="font-bold text-lg">{voucher.code}</p>
+                                <p className="text-sm text-gray-600">
+                                  {voucher.type === 'PERCENTAGE' ? `${voucher.value}%` : `${voucher.value.toLocaleString('vi-VN')}₫`} off
+                                  {voucher.minOrderAmount > 0 && ` • Tối thiểu ${voucher.minOrderAmount.toLocaleString('vi-VN')}₫`}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  HSD: {voucher.validUntil ? new Date(voucher.validUntil).toLocaleDateString('vi-VN') : 'N/A'}
+                                  {voucher.maxUses && ` • Giới hạn: ${voucher.maxUses} lần`}
+                                </p>
                             </div>
                             <div className="flex gap-2">
-                              <button className="p-2 hover:bg-gray-100 rounded">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setDialogType('edit-voucher');
+                                    setEditingItem(voucher);
+                                    setFormData({
+                                      code: voucher.code,
+                                      type: voucher.type,
+                                      value: voucher.value,
+                                      minOrderAmount: voucher.minOrderAmount || 0,
+                                      maxUses: voucher.maxUses,
+                                      maxUsesPerUser: voucher.maxUsesPerUser,
+                                      validFrom: voucher.validFrom ? new Date(voucher.validFrom).toISOString().split('T')[0] : '',
+                                      validUntil: voucher.validUntil ? new Date(voucher.validUntil).toISOString().split('T')[0] : '',
+                                      status: voucher.status,
+                                    });
+                                    setIsDialogOpen(true);
+                                  }}
+                                >
                                 <Edit className="w-4 h-4" />
-                              </button>
-                              <button className="p-2 hover:bg-red-100 text-red-600 rounded">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={async () => {
+                                    if (!confirm(`Bạn có chắc muốn xóa voucher ${voucher.code}?`)) return;
+                                    if (!token) return;
+                                    try {
+                                      await apiServices.vouchers.delete(voucher.id, token);
+                                      toast.success('Đã xóa voucher');
+                                      loadAdminData();
+                                    } catch (err: any) {
+                                      toast.error('Không thể xóa voucher: ' + (err?.message || 'Backend có thể chưa hỗ trợ admin CRUD vouchers'));
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                </Button>
                             </div>
                           </div>
                         ))}
                       </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -1010,25 +1480,97 @@ export function AdminDashboard() {
                 <TabsContent value="points" className="mt-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Cấu hình Điểm Xanh</CardTitle>
-                      <CardDescription>Cấu hình quy tắc kiếm và đổi điểm</CardDescription>
+                      <div className="flex items-center justify-between">
+                      <div>
+                          <CardTitle>Danh mục Phần thưởng</CardTitle>
+                          <CardDescription>Quản lý phần thưởng có thể đổi bằng điểm</CardDescription>
+                      </div>
+                        <Button
+                          onClick={() => {
+                            setDialogType('create-reward');
+                            setEditingItem(null);
+                            setFormData({
+                              name: '',
+                              description: '',
+                              pointsRequired: 0,
+                              type: 'voucher',
+                              discountValue: 0,
+                              minOrderAmount: 0,
+                              isActive: true,
+                            });
+                            setIsDialogOpen(true);
+                          }}
+                          className="bg-[#ca6946] hover:bg-[#b55835] text-white"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Thêm phần thưởng
+                        </Button>
+                      </div>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div>
-                        <Label>Điểm cho mỗi 100.000₫</Label>
-                        <Input type="number" defaultValue="10" />
+                    <CardContent>
+                      {rewardCatalog.length === 0 ? (
+                        <div className="text-center py-12 text-gray-500">
+                          <p>Chưa có phần thưởng nào. Hãy thêm phần thưởng mới để bắt đầu.</p>
+                          <p className="text-sm mt-2">Lưu ý: Backend có thể chưa hỗ trợ admin CRUD reward catalog.</p>
                       </div>
-                      <div>
-                        <Label>Thưởng sản phẩm Xanh</Label>
-                        <Input type="number" defaultValue="50" />
-                      </div>
-                      <div>
-                        <Label>Thưởng đánh giá</Label>
-                        <Input type="number" defaultValue="100" />
-                      </div>
-                      <button className="bg-[#ca6946] text-white px-6 py-2 rounded hover:bg-[#b55835]">
-                        Lưu thay đổi
-                      </button>
+                      ) : (
+                        <div className="space-y-4">
+                          {rewardCatalog.map((reward: any) => (
+                            <div key={reward.id} className="flex items-center justify-between p-4 border rounded-lg">
+                              <div className="flex-1">
+                                <p className="font-bold text-lg">{reward.name}</p>
+                                <p className="text-sm text-gray-600">{reward.description}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {reward.pointsRequired} điểm • {reward.type === 'voucher' ? 'Voucher' : reward.type}
+                                  {reward.discountValue > 0 && ` • Giảm ${reward.discountValue}${reward.type === 'PERCENTAGE' ? '%' : '₫'}`}
+                                </p>
+                              </div>
+                              <div className="flex gap-2">
+                                <Badge variant={reward.isActive ? 'default' : 'secondary'}>
+                                  {reward.isActive ? 'Hoạt động' : 'Tạm ngưng'}
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setDialogType('edit-reward');
+                                    setEditingItem(reward);
+                                    setFormData({
+                                      name: reward.name,
+                                      description: reward.description,
+                                      pointsRequired: reward.pointsRequired,
+                                      type: reward.type,
+                                      discountValue: reward.discountValue || 0,
+                                      minOrderAmount: reward.minOrderAmount || 0,
+                                      isActive: reward.isActive !== false,
+                                    });
+                                    setIsDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={async () => {
+                                    if (!confirm(`Bạn có chắc muốn xóa phần thưởng ${reward.name}?`)) return;
+                                    if (!token) return;
+                                    try {
+                                      await apiServices.rewards.catalogDelete(reward.id, token);
+                                      toast.success('Đã xóa phần thưởng');
+                                      loadAdminData();
+                                    } catch (err: any) {
+                                      toast.error('Không thể xóa phần thưởng: ' + (err?.message || 'Backend có thể chưa hỗ trợ admin CRUD reward catalog'));
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -1039,13 +1581,171 @@ export function AdminDashboard() {
           {/* Users Management */}
           {activeTab === "users" && (
             <div>
-              <h2 className="font-['Lora'] mb-8">Quản lý người dùng</h2>
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="font-['Lora']">Quản lý người dùng</h2>
+                <Button
+                  onClick={() => {
+                    setDialogType('create-user');
+                    setEditingItem(null);
+                    setFormData({ role: 'user', isActive: true });
+                    setIsDialogOpen(true);
+                  }}
+                  className="bg-[#ca6946] hover:bg-[#b55835] text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Thêm người dùng
+                </Button>
+              </div>
 
+              {/* Search and Filter */}
+              <div className="mb-6 flex gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Tìm kiếm theo email, tên..."
+                    className="pl-10"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                  />
+                </div>
+                <Select value={userRoleFilter} onValueChange={setUserRoleFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Lọc theo vai trò" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả vai trò</SelectItem>
+                    <SelectItem value="user">Người dùng</SelectItem>
+                    <SelectItem value="admin">Quản trị viên</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Users Table */}
               <Card>
-                <CardContent className="p-6">
-                  <p className="text-center text-gray-500 py-12">
-                    Giao diện quản lý người dùng - Xem và quản lý tài khoản khách hàng, quyền và hoạt động
-                  </p>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vai trò</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày tạo</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {usersList
+                          .filter((u: any) => {
+                            const searchLower = userSearch.toLowerCase();
+                            const matchesSearch = !userSearch || 
+                              u.email?.toLowerCase().includes(searchLower) ||
+                              u.name?.toLowerCase().includes(searchLower);
+                            const matchesRole = userRoleFilter === 'all' || u.role === userRoleFilter;
+                            return matchesSearch && matchesRole;
+                          })
+                          .map((user: any) => (
+                            <tr key={user.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.email}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.name || 'N/A'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                                  {user.role === 'admin' ? 'Quản trị' : 'Người dùng'}
+                                </Badge>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <Badge variant={user.isActive !== false ? 'default' : 'destructive'}>
+                                  {user.isActive !== false ? 'Hoạt động' : 'Đã khóa'}
+                                </Badge>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {user.createdAt ? new Date(user.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setDialogType('edit-user');
+                                      setEditingItem(user);
+                                      setFormData({
+                                        email: user.email,
+                                        name: user.name,
+                                        phone: user.phone,
+                                        role: user.role,
+                                        isActive: user.isActive !== false,
+                                      });
+                                      setIsDialogOpen(true);
+                                    }}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  {user.isActive !== false ? (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={async () => {
+                                        if (!token) return;
+                                        try {
+                                          await apiServices.users.deactivate(user.id, token);
+                                          toast.success('Đã khóa tài khoản người dùng');
+                                          loadAdminData();
+                                        } catch (err: any) {
+                                          toast.error('Không thể khóa tài khoản: ' + (err?.message || 'Lỗi không xác định'));
+                                        }
+                                      }}
+                                    >
+                                      <AlertCircle className="w-4 h-4 text-orange-600" />
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={async () => {
+                                        if (!token) return;
+                                        try {
+                                          await apiServices.users.activate(user.id, token);
+                                          toast.success('Đã kích hoạt tài khoản người dùng');
+                                          loadAdminData();
+                                        } catch (err: any) {
+                                          toast.error('Không thể kích hoạt tài khoản: ' + (err?.message || 'Lỗi không xác định'));
+                                        }
+                                      }}
+                                    >
+                                      <UserCog className="w-4 h-4 text-green-600" />
+                                    </Button>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={async () => {
+                                      if (!confirm(`Bạn có chắc muốn xóa người dùng ${user.email}?`)) return;
+                                      if (!token) return;
+                                      try {
+                                        await apiServices.users.delete(user.id, token);
+                                        toast.success('Đã xóa người dùng');
+                                        loadAdminData();
+                                      } catch (err: any) {
+                                        toast.error('Không thể xóa người dùng: ' + (err?.message || 'Lỗi không xác định'));
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    {usersList.length === 0 && (
+                      <div className="text-center py-12 text-gray-500">
+                        Không có người dùng nào
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -1079,15 +1779,20 @@ export function AdminDashboard() {
                   </button>
                 </div>
                 <p className="text-sm text-gray-600 mb-4">
-                  {dialogType === 'create' 
-                    ? 'Điền thông tin để tạo sản phẩm mới' 
-                    : 'Cập nhật thông tin sản phẩm'}
+                  {(dialogType === 'create' || dialogType === 'edit') ? (dialogType === 'create' ? 'Điền thông tin để tạo sản phẩm mới' : 'Cập nhật thông tin sản phẩm') :
+                   (dialogType === 'create-user' || dialogType === 'edit-user') ? (dialogType === 'create-user' ? 'Điền thông tin để tạo người dùng mới' : 'Cập nhật thông tin người dùng') :
+                   (dialogType === 'create-voucher' || dialogType === 'edit-voucher') ? (dialogType === 'create-voucher' ? 'Điền thông tin để tạo voucher mới' : 'Cập nhật thông tin voucher') :
+                   (dialogType === 'create-reward' || dialogType === 'edit-reward') ? (dialogType === 'create-reward' ? 'Điền thông tin để thêm phần thưởng mới' : 'Cập nhật thông tin phần thưởng') :
+                   ''}
                 </p>
                 {error && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
                     {error}
                   </div>
                 )}
+                
+                {/* Product Form */}
+                {(dialogType === 'create' || dialogType === 'edit') && (
                 <div className="grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1231,13 +1936,379 @@ export function AdminDashboard() {
                   )}
                 </div>
                 </div>
+                )}
+
+                {/* User Form */}
+                {(dialogType === 'create-user' || dialogType === 'edit-user') && (
+                <div className="grid gap-4">
+                  <div>
+                    <Label htmlFor="user-email">Email *</Label>
+                    <Input
+                      id="user-email"
+                      type="email"
+                      value={formData.email || ''}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      placeholder="user@example.com"
+                      disabled={dialogType === 'edit-user'}
+                    />
+                  </div>
+                  {dialogType === 'create-user' && (
+                    <div>
+                      <Label htmlFor="user-password">Mật khẩu *</Label>
+                      <Input
+                        id="user-password"
+                        type="password"
+                        value={formData.password || ''}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        placeholder="Tối thiểu 6 ký tự"
+                      />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="user-name">Tên</Label>
+                      <Input
+                        id="user-name"
+                        value={formData.name || ''}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        placeholder="Tên người dùng"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="user-phone">Số điện thoại</Label>
+                      <Input
+                        id="user-phone"
+                        value={formData.phone || ''}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        placeholder="0123456789"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="user-role">Vai trò *</Label>
+                    <Select value={formData.role || 'user'} onValueChange={(value) => setFormData({...formData, role: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">Người dùng</SelectItem>
+                        <SelectItem value="admin">Quản trị viên</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="user-active"
+                      checked={formData.isActive !== false}
+                      onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor="user-active">Tài khoản hoạt động</Label>
+                  </div>
+                </div>
+                )}
+
+                {/* Voucher Form */}
+                {(dialogType === 'create-voucher' || dialogType === 'edit-voucher') && (
+                <div className="grid gap-4">
+                  <div>
+                    <Label htmlFor="voucher-code">Mã voucher *</Label>
+                    <Input
+                      id="voucher-code"
+                      value={formData.code || ''}
+                      onChange={(e) => setFormData({...formData, code: e.target.value.toUpperCase()})}
+                      placeholder="GREEN20"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="voucher-type">Loại *</Label>
+                      <Select value={formData.type || 'PERCENTAGE'} onValueChange={(value) => setFormData({...formData, type: value})}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PERCENTAGE">Phần trăm (%)</SelectItem>
+                          <SelectItem value="FIXED_AMOUNT">Số tiền cố định</SelectItem>
+                          <SelectItem value="FREE_SHIPPING">Miễn phí vận chuyển</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="voucher-value">Giá trị *</Label>
+                      <Input
+                        id="voucher-value"
+                        type="number"
+                        min="0"
+                        value={formData.value || 0}
+                        onChange={(e) => setFormData({...formData, value: Number(e.target.value)})}
+                        placeholder={formData.type === 'PERCENTAGE' ? '20' : '50000'}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="voucher-min-order">Đơn hàng tối thiểu (₫)</Label>
+                      <Input
+                        id="voucher-min-order"
+                        type="number"
+                        min="0"
+                        value={formData.minOrderAmount || 0}
+                        onChange={(e) => setFormData({...formData, minOrderAmount: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="voucher-max-uses">Số lần sử dụng tối đa</Label>
+                      <Input
+                        id="voucher-max-uses"
+                        type="number"
+                        min="1"
+                        value={formData.maxUses || 100}
+                        onChange={(e) => setFormData({...formData, maxUses: Number(e.target.value)})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="voucher-valid-from">Ngày bắt đầu</Label>
+                      <Input
+                        id="voucher-valid-from"
+                        type="date"
+                        value={formData.validFrom || ''}
+                        onChange={(e) => setFormData({...formData, validFrom: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="voucher-valid-until">Ngày kết thúc</Label>
+                      <Input
+                        id="voucher-valid-until"
+                        type="date"
+                        value={formData.validUntil || ''}
+                        onChange={(e) => setFormData({...formData, validUntil: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+                )}
+
+                {/* Reward Catalog Form */}
+                {(dialogType === 'create-reward' || dialogType === 'edit-reward') && (
+                <div className="grid gap-4">
+                  <div>
+                    <Label htmlFor="reward-name">Tên phần thưởng *</Label>
+                    <Input
+                      id="reward-name"
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      placeholder="Voucher giảm giá 20%"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="reward-description">Mô tả</Label>
+                    <textarea
+                      id="reward-description"
+                      className="w-full min-h-[80px] px-3 py-2 border rounded-md"
+                      value={formData.description || ''}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      placeholder="Mô tả về phần thưởng..."
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="reward-points">Điểm yêu cầu *</Label>
+                      <Input
+                        id="reward-points"
+                        type="number"
+                        min="1"
+                        value={formData.pointsRequired || 0}
+                        onChange={(e) => setFormData({...formData, pointsRequired: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="reward-type">Loại</Label>
+                      <Select value={formData.type || 'voucher'} onValueChange={(value) => setFormData({...formData, type: value})}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="voucher">Voucher</SelectItem>
+                          <SelectItem value="discount">Giảm giá</SelectItem>
+                          <SelectItem value="free_shipping">Miễn phí vận chuyển</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="reward-discount">Giá trị giảm giá</Label>
+                      <Input
+                        id="reward-discount"
+                        type="number"
+                        min="0"
+                        value={formData.discountValue || 0}
+                        onChange={(e) => setFormData({...formData, discountValue: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="reward-min-order">Đơn hàng tối thiểu (₫)</Label>
+                      <Input
+                        id="reward-min-order"
+                        type="number"
+                        min="0"
+                        value={formData.minOrderAmount || 0}
+                        onChange={(e) => setFormData({...formData, minOrderAmount: Number(e.target.value)})}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="reward-active"
+                      checked={formData.isActive !== false}
+                      onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor="reward-active">Hoạt động</Label>
+                  </div>
+                </div>
+                )}
+
+                {/* Material Form */}
+                {(dialogType === 'create-material' || dialogType === 'edit-material') && (
+                <div className="grid gap-4">
+                  <div>
+                    <Label htmlFor="material-name">Tên chất liệu *</Label>
+                    <Input
+                      id="material-name"
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      placeholder="Ví dụ: Organic Cotton"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="material-description">Mô tả</Label>
+                    <textarea
+                      id="material-description"
+                      className="w-full min-h-[80px] px-3 py-2 border rounded-md"
+                      value={formData.description || ''}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      placeholder="Mô tả về chất liệu..."
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="material-active"
+                      checked={formData.isActive !== false}
+                      onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor="material-active">Hoạt động</Label>
+                  </div>
+                </div>
+                )}
+
+                {/* Print Method Form */}
+                {(dialogType === 'create-print-method' || dialogType === 'edit-print-method') && (
+                <div className="grid gap-4">
+                  <div>
+                    <Label htmlFor="print-method-name">Tên phương thức in *</Label>
+                    <Input
+                      id="print-method-name"
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      placeholder="Ví dụ: Water-Based Ink"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="print-method-description">Mô tả</Label>
+                    <textarea
+                      id="print-method-description"
+                      className="w-full min-h-[80px] px-3 py-2 border rounded-md"
+                      value={formData.description || ''}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      placeholder="Mô tả về phương thức in..."
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="print-method-active"
+                      checked={formData.isActive !== false}
+                      onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor="print-method-active">Hoạt động</Label>
+                  </div>
+                </div>
+                )}
+
+                {/* Payment Method Form */}
+                {(dialogType === 'create-payment-method' || dialogType === 'edit-payment-method') && (
+                <div className="grid gap-4">
+                  <div>
+                    <Label htmlFor="payment-method-name">Tên phương thức thanh toán *</Label>
+                    <Input
+                      id="payment-method-name"
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      placeholder="Ví dụ: VNPay"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="payment-method-type">Loại *</Label>
+                    <Select value={formData.type || 'vnpay'} onValueChange={(value) => setFormData({...formData, type: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="vnpay">VNPay</SelectItem>
+                        <SelectItem value="momo">MoMo</SelectItem>
+                        <SelectItem value="cod">Thanh toán khi nhận hàng (COD)</SelectItem>
+                        <SelectItem value="bank_transfer">Chuyển khoản ngân hàng</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="payment-method-active"
+                      checked={formData.isActive !== false}
+                      onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor="payment-method-active">Hoạt động</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="payment-method-default"
+                      checked={formData.isDefault || false}
+                      onChange={(e) => setFormData({...formData, isDefault: e.target.checked})}
+                      className="w-4 h-4"
+                    />
+                    <Label htmlFor="payment-method-default">Đặt làm mặc định</Label>
+                  </div>
+                </div>
+                )}
+
                 <div className="flex justify-end gap-2 mt-4">
                   <Button variant="outline" onClick={handleCloseDialog}>
                     Hủy
                   </Button>
-                  <Button onClick={handleSaveProduct}>
+                  <Button onClick={
+                    (dialogType === 'create' || dialogType === 'edit') ? handleSaveProduct :
+                    (dialogType === 'create-user' || dialogType === 'edit-user') ? handleSaveUser :
+                    (dialogType === 'create-voucher' || dialogType === 'edit-voucher') ? handleSaveVoucher :
+                    (dialogType === 'create-reward' || dialogType === 'edit-reward') ? handleSaveReward :
+                    (dialogType === 'create-material' || dialogType === 'edit-material') ? handleSaveMaterial :
+                    (dialogType === 'create-print-method' || dialogType === 'edit-print-method') ? handleSavePrintMethod :
+                    (dialogType === 'create-payment-method' || dialogType === 'edit-payment-method') ? handleSavePaymentMethod :
+                    handleCloseDialog
+                  }>
                     <Save className="w-4 h-4 mr-2" />
-                    {dialogType === 'create' ? 'Tạo' : 'Lưu'}
+                    {(dialogType === 'create' || dialogType === 'create-user' || dialogType === 'create-voucher' || dialogType === 'create-reward' || dialogType === 'create-material' || dialogType === 'create-print-method' || dialogType === 'create-payment-method') ? 'Tạo' : 'Lưu'}
                   </Button>
                 </div>
             </div>

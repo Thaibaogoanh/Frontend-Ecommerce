@@ -18,11 +18,12 @@ import {
   AlertCircle,
   Plus
 } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiServices } from '../services/apiConfig';
 import { useAuth } from '../hooks/useAuth';
 import { Loading } from './ui/loading';
 import { ErrorDisplay } from './ui/error';
+import { toast } from "sonner";
 
 interface CheckoutStep {
   number: number;
@@ -103,7 +104,9 @@ export function CheckoutPage() {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu thanh toán');
+      const msg = err instanceof Error ? err.message : 'Không thể tải dữ liệu thanh toán';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -115,7 +118,9 @@ export function CheckoutPage() {
       setError(null);
       const currentToken = getToken();
       if (!currentToken || !cart || !selectedAddress) {
-        setError('Vui lòng điền đầy đủ các trường bắt buộc');
+        const msg = 'Vui lòng điền đầy đủ các trường bắt buộc';
+        setError(msg);
+        toast.error(msg);
         if (!currentToken) {
           window.location.hash = '#login';
         }
@@ -123,7 +128,9 @@ export function CheckoutPage() {
       }
 
       if (!cart.items || cart.items.length === 0) {
-        setError('Giỏ hàng trống. Vui lòng thêm sản phẩm vào giỏ hàng.');
+        const msg = 'Giỏ hàng trống. Vui lòng thêm sản phẩm vào giỏ hàng.';
+        setError(msg);
+        toast.error(msg);
         return;
       }
 
@@ -158,6 +165,7 @@ export function CheckoutPage() {
       console.log('Creating order with data:', orderData);
       const order = await apiServices.orders.create(orderData, currentToken) as any;
       console.log('Order created:', order);
+      toast.success('Tạo đơn hàng thành công');
       
       // Clear voucher sau khi đặt hàng thành công
       localStorage.removeItem('appliedVoucher');
@@ -183,22 +191,29 @@ export function CheckoutPage() {
 
         // Nếu có paymentUrl, redirect đến payment gateway
         if (paymentResponse?.paymentUrl) {
+          // Thanh toán online: chuyển tới VNPay / Momo
+          toast.info('Đang chuyển đến cổng thanh toán an toàn...');
           window.location.href = paymentResponse.paymentUrl;
         } else {
-          // Nếu không có paymentUrl (mock mode), chuyển đến order success
+          // Không có paymentUrl (mock / lỗi cấu hình)
+          toast.warning('Không nhận được đường dẫn thanh toán. Đơn hàng đã được tạo, vui lòng thanh toán sau.');
           window.location.hash = `#order-success?id=${order.id}`;
         }
       } catch (paymentErr: any) {
         console.error('Payment initiation error:', paymentErr);
-        // Nếu payment initiation fail, vẫn chuyển đến order success (order đã được tạo)
-        // User có thể thanh toán sau
-        window.location.hash = `#order-success?id=${order.id}`;
+        const msg =
+          paymentErr?.response?.data?.message ||
+          paymentErr?.message ||
+          'Không thể khởi tạo thanh toán. Đơn hàng đã được tạo, bạn có thể thanh toán sau trong lịch sử đơn hàng.';
+        toast.error(msg);
+        // Đơn đã tạo nhưng thanh toán lỗi -> chuyển đến chi tiết đơn để user xem/trả sau
+        window.location.hash = `#order-detail?id=${order.id}`;
       }
     } catch (err: any) {
       console.error('Create order error:', err);
-      const errorMessage = err?.message || err?.response?.data?.message || 'Không thể tạo đơn hàng';
+      const errorMessage = err?.response?.data?.message || err?.message || 'Không thể tạo đơn hàng';
       setError(errorMessage);
-      alert(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setCreatingOrder(false);
     }

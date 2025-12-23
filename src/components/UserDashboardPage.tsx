@@ -16,12 +16,152 @@ import {
   CheckCircle,
   XCircle,
   ChevronRight,
-  Trash2
+  Trash2,
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { apiServices } from '../services/apiConfig';
 import { useAuth } from '../hooks/useAuth';
 import { Loading } from './ui/loading';
 import { ErrorDisplay } from './ui/error';
+import { toast } from "sonner";
+import { Input } from './ui/input';
+
+// ====== CHANGE PASSWORD FORM COMPONENT ======
+function ChangePasswordForm({ onSuccess }: { token?: string; onSuccess?: () => void }) {
+  const { getToken } = useAuth();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error('Vui lòng điền đầy đủ các trường');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast.error('Mật khẩu mới phải có ít nhất 8 ký tự');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const token = getToken();
+      if (!token) {
+        toast.error('Vui lòng đăng nhập lại');
+        return;
+      }
+
+      // Call change password API
+      await apiServices.auth.changePassword(
+        {
+          currentPassword,
+          newPassword,
+          confirmPassword
+        },
+        token
+      );
+
+      toast.success('Đã đổi mật khẩu thành công!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Không thể đổi mật khẩu';
+      toast.error(msg);
+      console.error('Change password error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleChangePassword} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium mb-2">Mật khẩu hiện tại</label>
+        <div className="relative">
+          <Input
+            type={showCurrentPassword ? 'text' : 'password'}
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            placeholder="Nhập mật khẩu hiện tại"
+            className="pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+          >
+            {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Mật khẩu mới</label>
+        <div className="relative">
+          <Input
+            type={showNewPassword ? 'text' : 'password'}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Nhập mật khẩu mới (tối thiểu 8 ký tự)"
+            className="pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowNewPassword(!showNewPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+          >
+            {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Xác nhận mật khẩu</label>
+        <div className="relative">
+          <Input
+            type={showConfirmPassword ? 'text' : 'password'}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Xác nhận mật khẩu mới"
+            className="pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+          >
+            {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-[#ca6946] hover:bg-[#b55835] disabled:opacity-50 text-white py-3 rounded-full transition-all font-medium"
+      >
+        {loading ? 'Đang xử lý...' : 'Đổi mật khẩu'}
+      </button>
+    </form>
+  );
+}
 
 export function UserDashboardPage() {
   const { getToken } = useAuth();
@@ -104,7 +244,9 @@ export function UserDashboardPage() {
       setFavorites(formattedFavorites);
     } catch (err) {
       console.error('Dashboard load error:', err);
-      setError(err instanceof Error ? err.message : 'Không thể tải bảng điều khiển');
+      const msg = err instanceof Error ? err.message : 'Không thể tải bảng điều khiển';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -149,9 +291,10 @@ export function UserDashboardPage() {
         return null;
       }).filter(Boolean);
       setFavorites(formattedFavorites);
+      toast.success('Đã xóa khỏi danh sách yêu thích');
     } catch (err) {
       console.error('Remove favorite error:', err);
-      alert('Không thể xóa yêu thích');
+      toast.error('Không thể xóa yêu thích');
     } finally {
       setRemovingFavorite(null);
     }
@@ -608,16 +751,29 @@ export function UserDashboardPage() {
                             phone: userProfile?.phone,
                             address: userProfile?.address,
                           }, token);
-                          alert('Đã cập nhật thông tin thành công!');
+                          toast.success('Đã cập nhật thông tin thành công!');
                           await loadDashboardData();
                         } catch (err) {
-                          alert('Không thể cập nhật thông tin: ' + (err instanceof Error ? err.message : 'Lỗi không xác định'));
+                          const msg = err instanceof Error ? err.message : 'Lỗi không xác định';
+                          toast.error('Không thể cập nhật thông tin: ' + msg);
                         }
                       }}
                       className="w-full bg-[#ca6946] hover:bg-[#b55835] text-white py-3 rounded-full transition-all"
                     >
                       Lưu thay đổi
                     </button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Lock className="w-5 h-5" />
+                      Đổi mật khẩu
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ChangePasswordForm token={userProfile?.token} onSuccess={() => loadDashboardData()} />
                   </CardContent>
                 </Card>
 
