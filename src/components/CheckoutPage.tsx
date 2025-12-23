@@ -145,15 +145,22 @@ export function CheckoutPage() {
 
       // Format order data theo API requirements
       const orderData = {
-        items: cart.items.map((item: any) => ({
-          productId: item.productId,
-          quantity: item.quantity || item.qty || 1,
-          price: item.price || item.unit_price_snapshot || item.product?.price || 0,
-          colorCode: item.colorCode,
-          sizeCode: item.sizeCode,
-          designId: item.designId,
-          customDesignData: item.customDesignData, // Include custom design data from cart
-        })),
+        items: cart.items.map((item: any) => {
+          // Ensure price is a valid number > 0
+          const price = parseFloat(item.price || item.unit_price_snapshot || item.product?.price || 0);
+          if (price <= 0) {
+            throw new Error(`Invalid price for product ${item.productId}. Price must be greater than 0.`);
+          }
+          return {
+            productId: item.productId,
+            quantity: item.quantity || item.qty || 1,
+            price: price,
+            colorCode: item.colorCode,
+            sizeCode: item.sizeCode,
+            designId: item.designId,
+            customDesignData: item.customDesignData, // Include custom design data from cart
+          };
+        }),
         shippingAddress: selectedAddress.line1 
           ? `${selectedAddress.line1}${selectedAddress.line2 ? ', ' + selectedAddress.line2 : ''}, ${selectedAddress.state || ''}, ${selectedAddress.country || 'Vietnam'} ${selectedAddress.zip || ''}`
           : 'Address not specified',
@@ -167,7 +174,12 @@ export function CheckoutPage() {
       console.log('Order created:', order);
       toast.success('Tạo đơn hàng thành công');
       
-      // Clear voucher sau khi đặt hàng thành công
+      // Clear cart và voucher sau khi đặt hàng thành công
+      try {
+        await apiServices.cart.clear(currentToken);
+      } catch (clearErr) {
+        console.warn('Failed to clear cart:', clearErr);
+      }
       localStorage.removeItem('appliedVoucher');
 
       // Nếu là COD (Cash on Delivery), chuyển thẳng đến order success
@@ -201,13 +213,15 @@ export function CheckoutPage() {
         }
       } catch (paymentErr: any) {
         console.error('Payment initiation error:', paymentErr);
+        // Payment endpoint not available - order still created successfully
+        // User can proceed to order success page
         const msg =
           paymentErr?.response?.data?.message ||
           paymentErr?.message ||
-          'Không thể khởi tạo thanh toán. Đơn hàng đã được tạo, bạn có thể thanh toán sau trong lịch sử đơn hàng.';
-        toast.error(msg);
-        // Đơn đã tạo nhưng thanh toán lỗi -> chuyển đến chi tiết đơn để user xem/trả sau
-        window.location.hash = `#order-detail?id=${order.id}`;
+          'Thanh toán sẽ được xử lý sau. Đơn hàng đã được tạo thành công.';
+        toast.warning(msg);
+        // Order was created successfully, show order success page
+        window.location.hash = `#order-success?id=${order.id}`;
       }
     } catch (err: any) {
       console.error('Create order error:', err);
