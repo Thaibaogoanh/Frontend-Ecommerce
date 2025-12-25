@@ -28,7 +28,7 @@ export function VoucherCoins() {
                 </div>
                 <div>
                   <h3 className="font-['Lato'] mb-1">Nhận Vouchers độc quyền</h3>
-                  <p className="text-white/80">Giảm giá lên đến 50% cho các thiết kế và phôi áo cao cấp</p>
+                  <p className="text-white/80">Giảm giá lên đến 50% cho các thiết kế và áo cao cấp</p>
                 </div>
               </div>
 

@@ -124,7 +124,7 @@ export function BlanksListingPage() {
               </a>
               <span>/</span>
               <span className="text-black">
-                {searchQuery ? `Kết quả tìm kiếm: "${searchQuery}"` : 'Cửa hàng Phôi áo Bền vững'}
+                {searchQuery ? `Kết quả tìm kiếm: "${searchQuery}"` : 'Cửa hàng Áo Bền vững'}
               </span>
             </div>
           </div>

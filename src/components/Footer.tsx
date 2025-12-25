@@ -36,7 +36,7 @@ export function Footer() {
           <div>
             <h3 className="text-white font-['Lato'] mb-4">Shop</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="#shop-blanks" className="hover:text-white transition-colors">Phôi áo bền vững</a></li>
+              <li><a href="#shop-blanks" className="hover:text-white transition-colors">Áo bền vững</a></li>
               <li><a href="#designs" className="hover:text-white transition-colors">Thiết kế độc đáo</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Bán chạy nhất</a></li>
               <li><a href="#" className="hover:text-white transition-colors">Sản phẩm mới</a></li>

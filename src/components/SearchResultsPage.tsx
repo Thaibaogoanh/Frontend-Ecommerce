@@ -58,7 +58,7 @@ export function SearchResultsPage() {
           setBlanks(response.products || []);
           setBlanksTotal(response.total || 0);
         } catch (err) {
-          setBlanksError(err instanceof Error ? err.message : 'Không thể tải phôi áo');
+          setBlanksError(err instanceof Error ? err.message : 'Không thể tải áo');
         } finally {
           setBlanksLoading(false);
         }
@@ -118,7 +118,7 @@ export function SearchResultsPage() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Tìm kiếm phôi áo, thiết kế độc đáo..."
+                placeholder="Tìm kiếm áo, thiết kế độc đáo..."
                 defaultValue={searchQuery}
                 className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-full focus:outline-none focus:border-[#BCF181] transition-colors"
               />
@@ -140,7 +140,7 @@ export function SearchResultsPage() {
                   </TabsTrigger>
                   <TabsTrigger value="blanks">
                     <Package className="w-4 h-4 mr-2" />
-                    Phôi áo ({blanksTotal})
+                    Áo ({blanksTotal})
                   </TabsTrigger>
                   <TabsTrigger value="designs">
                     <Palette className="w-4 h-4 mr-2" />
@@ -157,7 +157,7 @@ export function SearchResultsPage() {
                       <h2 className="text-2xl font-['Lato']">Phôi Áo ({blanksTotal})</h2>
                     </div>
                     {blanksLoading ? (
-                      <Loading text="Đang tải phôi áo..." />
+                      <Loading text="Đang tải áo..." />
                     ) : blanksError ? (
                       <ErrorDisplay message={blanksError} />
                     ) : blanks.length > 0 ? (
@@ -171,7 +171,7 @@ export function SearchResultsPage() {
                     ) : (
                       <div className="text-center py-8 text-gray-500">
                         <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                        <p>Không tìm thấy phôi áo nào</p>
+                        <p>Không tìm thấy áo nào</p>
                       </div>
                     )}
                   </div>

@@ -5,48 +5,48 @@ import { Leaf, Droplets, Recycle, Heart, Award, TreePine, ChevronRight } from 'l
 export function AboutGreenPage() {
   const materials = [
     {
-      name: "Organic Cotton",
+      name: "Bông hữu cơ",
       icon: <Leaf className="w-8 h-8" />,
-      description: "100% certified organic cotton grown without harmful pesticides or synthetic fertilizers",
-      features: ["GOTS Certified", "Biodegradable", "Soft & Breathable"],
+      description: "Bông hữu cơ 100% được chứng nhận, trồng không dùng thuốc trừ sâu hoặc phân bón tổng hợp",
+      features: ["Được chứng nhận GOTS", "Có thể phân hủy", "Mềm mại & Thoáng khí"],
     },
     {
-      name: "Recycled Polyester",
+      name: "Polyester tái chế",
       icon: <Recycle className="w-8 h-8" />,
-      description: "Made from recycled plastic bottles, reducing waste and environmental impact",
-      features: ["GRS Certified", "Durable", "Moisture-wicking"],
+      description: "Làm từ các chai nhựa tái chế, giảm chất thải và tác động môi trường",
+      features: ["Được chứng nhận GRS", "Bền vững", "Hút ẩm tốt"],
     },
     {
-      name: "Bamboo Blend",
+      name: "Hỗn hợp tre",
       icon: <TreePine className="w-8 h-8" />,
-      description: "Sustainable bamboo fiber that grows rapidly without pesticides",
-      features: ["Naturally Antibacterial", "Ultra-soft", "Temperature Regulating"],
+      description: "Sợi tre bền vững phát triển nhanh mà không cần thuốc trừ sâu",
+      features: ["Kháng khuẩn tự nhiên", "Cực mềm mại", "Điều hòa nhiệt độ"],
     },
   ];
 
   const certifications = [
     {
       name: "GOTS",
-      fullName: "Global Organic Textile Standard",
-      description: "Ensures organic status of textiles from harvesting to manufacturing",
+      fullName: "Tiêu chuẩn dệt may hữu cơ toàn cầu",
+      description: "Đảm bảo tình trạng hữu cơ của dệt may từ thu hoạch đến sản xuất",
     },
     {
       name: "OEKO-TEX",
-      fullName: "Standard 100",
-      description: "Certifies products are free from harmful substances",
+      fullName: "Tiêu chuẩn 100",
+      description: "Chứng nhận sản phẩm không chứa các chất độc hại",
     },
     {
-      name: "Fair Trade",
-      fullName: "Fair Trade Certified",
-      description: "Ensures fair wages and safe working conditions",
+      name: "Thương mại công bằng",
+      fullName: "Được chứng nhận thương mại công bằng",
+      description: "Đảm bảo lương công bằng và điều kiện làm việc an toàn",
     },
   ];
 
   const impactStats = [
-    { value: "2.5kg", label: "CO₂ Saved per Product" },
-    { value: "500L", label: "Water Saved" },
-    { value: "95%", label: "Less Waste vs Fast Fashion" },
-    { value: "10k+", label: "Trees Planted" },
+    { value: "2.5kg", label: "CO₂ được tiết kiệm trên mỗi sản phẩm" },
+    { value: "500L", label: "Nước được tiết kiệm" },
+    { value: "95%", label: "Giảm chất thải so với thời trang nhanh" },
+    { value: "10k+", label: "Cây được trồng" },
   ];
 
   return (

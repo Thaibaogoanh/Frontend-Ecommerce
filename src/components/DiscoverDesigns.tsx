@@ -79,7 +79,7 @@ export function DiscoverDesigns() {
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
             Khám phá hàng trăm thiết kế độc đáo từ cộng đồng nghệ sĩ tài năng. 
-            Chọn thiết kế yêu thích và tùy chỉnh trên phôi áo bền vững của bạn.
+            Chọn thiết kế yêu thích và tùy chỉnh trên áo bền vững của bạn.
           </p>
         </div>
 

@@ -38,7 +38,7 @@ export function ShopSustainableBlanks() {
             Mua Phôi Áo Bền Vững
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Chọn từ bộ sưu tập phôi áo cao cấp làm từ vật liệu bền vững. 
+            Chọn từ bộ sưu tập áo cao cấp làm từ vật liệu bền vững. 
             Mỗi sản phẩm đều được chứng nhận organic và thân thiện với môi trường.
           </p>
         </div>
@@ -63,7 +63,7 @@ export function ShopSustainableBlanks() {
                 setLoading(false);
               }
             }}
-            emptyMessage="Không có phôi áo bền vững nào"
+            emptyMessage="Không có áo bền vững nào"
           />
         </div>
 
@@ -73,7 +73,7 @@ export function ShopSustainableBlanks() {
             href="#blanks"
             className="inline-block border-2 border-black hover:bg-black hover:text-white px-8 py-3 rounded-full transition-all font-medium cursor-pointer"
           >
-            Xem tất cả phôi áo ({products.length + 13})
+            Xem tất cả áo ({products.length + 13})
           </a>
         </div>
       </div>

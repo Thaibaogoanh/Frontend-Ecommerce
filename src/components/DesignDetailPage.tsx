@@ -681,7 +681,7 @@ export function DesignDetailPage() {
                 <Leaf className="w-5 h-5 text-green-700 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
                   <p className="font-medium text-green-900 mb-1">Sản phẩm Xanh sẵn có</p>
-                  <p className="text-green-800">Đây là sản phẩm hoàn chỉnh với tác phẩm thiết kế sẵn. Muốn tạo của riêng bạn? Ghé thăm <a href="#blanks" className="underline font-medium">phần Phôi áo</a> của chúng tôi để tùy chỉnh từ đầu.</p>
+                  <p className="text-green-800">Đây là sản phẩm hoàn chỉnh với tác phẩm thiết kế sẵn. Muốn tạo của riêng bạn? Ghé thăm <a href="#blanks" className="underline font-medium">phần Áo</a> của chúng tôi để tùy chỉnh từ đầu.</p>
                 </div>
               </div>
             </div>

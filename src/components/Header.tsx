@@ -63,7 +63,7 @@ export function Header() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Tìm kiếm phôi áo, thiết kế độc đáo, vouchers..."
+                placeholder="Tìm kiếm áo, thiết kế độc đáo, vouchers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-full focus:outline-none focus:border-[#BCF181] transition-colors"
@@ -193,7 +193,7 @@ export function Header() {
             href="#blanks"
             className="flex items-center gap-2 hover:text-[#ca6946] transition-colors"
           >
-            <span>Cửa hàng phôi áo</span>
+            <span>Cửa hàng Áo</span>
           </a>
           <a href="#designs" className="hover:text-[#ca6946] transition-colors">
             Thư viện thiết kế
