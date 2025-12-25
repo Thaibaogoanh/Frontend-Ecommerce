@@ -5,6 +5,7 @@ import { DiscoverDesigns } from './components/DiscoverDesigns';
 import { GreenCommitment } from './components/GreenCommitment';
 import { VoucherCoins } from './components/VoucherCoins';
 import { ProductRecommendations } from './components/ProductRecommendations';
+import { DesignRecommendations } from './components/DesignRecommendations';
 import { Footer } from './components/Footer';
 import { BlanksListingPage } from './components/BlanksListingPage';
 import { BlankDetailPage } from './components/BlankDetailPage';
@@ -32,6 +33,7 @@ import { FavoritesPage } from './components/FavoritesPage';
 import { RewardsPage } from './components/RewardsPage';
 import { VouchersPage } from './components/VouchersPage';
 import { ReviewsPage } from './components/ReviewsPage';
+import { SearchResultsPage } from './components/SearchResultsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useState, useEffect } from 'react';
 
@@ -63,7 +65,8 @@ type PageType =
   | 'about-green'
   | 'help'
   | 'contact'
-  | 'admin';
+  | 'admin'
+  | 'search';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
@@ -158,6 +161,8 @@ export default function App() {
       return <ProtectedRoute pageName="quản lý đánh giá"><ReviewsPage /></ProtectedRoute>;
     case 'admin':
       return <ProtectedRoute requiredRole="admin" pageName="bảng điều khiển quản trị"><AdminDashboard /></ProtectedRoute>;
+    case 'search':
+      return <SearchResultsPage />;
     default:
       return (
         <div className="min-h-screen bg-white">
@@ -169,6 +174,7 @@ export default function App() {
             <GreenCommitment />
             <VoucherCoins />
             <ProductRecommendations />
+            <DesignRecommendations />
           </main>
           <Footer />
         </div>

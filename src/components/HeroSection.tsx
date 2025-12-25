@@ -18,14 +18,14 @@ export function HeroSection() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-[#BCF181]/20 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
               <Leaf className="w-4 h-4 text-[#BCF181]" />
-              <span className="text-[#BCF181]">Eco-Friendly Print-on-Demand</span>
+              <span className="text-[#BCF181]">In Theo Yêu Cầu Thân Thiện Môi Trường</span>
             </div>
 
             {/* Main Heading */}
             <h1 className="font-['Dela_Gothic_One'] tracking-wider mb-6">
-              YOUR STYLE.
+              PHONG CÁCH CỦA BẠN.
               <br />
-              <span className="text-[#BCF181]">OUR PLANET.</span>
+              <span className="text-[#BCF181]">HÀNH TINH CỦA CHÚNG TA.</span>
             </h1>
 
             {/* Description */}
@@ -41,13 +41,13 @@ export function HeroSection() {
             <div className="flex flex-wrap gap-4">
               <button className="bg-[#ca6946] hover:bg-[#b55835] px-8 py-4 rounded-full text-white font-['Lato'] tracking-wider transition-all hover:scale-105 flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
-                START DESIGNING
+                BẮT ĐẦU THIẾT KẾ
               </button>
               <a
                 href="#blanks"
                 className="border-2 border-white hover:bg-white hover:text-black px-8 py-4 rounded-full text-white font-['Lato'] tracking-wider transition-all inline-block"
               >
-                Shop Sustainable Blanks
+                Mua Phôi Áo Bền Vững
               </a>
             </div>
 

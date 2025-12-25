@@ -9,7 +9,7 @@ export function VoucherCoins() {
           <div>
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
               <Star className="w-4 h-4" />
-              <span>Rewards Program</span>
+              <span>Chương Trình Thưởng</span>
             </div>
 
             <h2 className="font-['Lato'] uppercase tracking-wider mb-4">
@@ -48,7 +48,7 @@ export function VoucherCoins() {
                 </div>
                 <div>
                   <h3 className="font-['Lato'] mb-1">Ưu đãi đặc biệt</h3>
-                  <p className="text-white/80">Miễn phí vận chuyển và early access đến thiết kế mới</p>
+                  <p className="text-white/80">Miễn phí vận chuyển và truy cập sớm đến thiết kế mới</p>
                 </div>
               </div>
             </div>
@@ -56,11 +56,11 @@ export function VoucherCoins() {
             {/* CTA */}
             <div className="flex flex-wrap gap-4">
               <button className="bg-white text-[#ca6946] px-8 py-3 rounded-full hover:bg-gray-100 transition-all inline-flex items-center gap-2">
-                Join Now
+                Tham Gia Ngay
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button className="border-2 border-white px-8 py-3 rounded-full hover:bg-white/10 transition-all">
-                How It Works
+                Cách Hoạt Động
               </button>
             </div>
           </div>
@@ -71,7 +71,7 @@ export function VoucherCoins() {
             <div className="bg-white text-black rounded-2xl p-8 mb-6 shadow-xl transform hover:scale-105 transition-transform">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-gray-500 mb-1">Your Coins</p>
+                  <p className="text-gray-500 mb-1">Coins Của Bạn</p>
                   <p className="font-bold">1,250 Coins</p>
                 </div>
                 <div className="bg-[#BCF181] p-3 rounded-full">
@@ -79,7 +79,7 @@ export function VoucherCoins() {
                 </div>
               </div>
               <div className="bg-gray-100 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-1">Next reward at</p>
+                <p className="text-sm text-gray-600 mb-1">Phần thưởng tiếp theo tại</p>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 bg-gray-300 rounded-full h-2">
                     <div className="bg-[#ca6946] h-2 rounded-full" style={{ width: '75%' }}></div>
@@ -98,7 +98,7 @@ export function VoucherCoins() {
               </div>
               <div className="bg-yellow-300 text-black rounded-xl p-6 shadow-lg">
                 <Zap className="w-8 h-8 mb-2" />
-                <p className="font-bold mb-1">Free Ship</p>
+                <p className="font-bold mb-1">Miễn Phí Vận Chuyển</p>
                 <p className="text-sm">300 Coins</p>
               </div>
             </div>

@@ -3,9 +3,11 @@ import { Header } from './Header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Slider } from './ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import { Button } from './ui/button';
 import {
   Upload, Type, Image as ImageIcon, RotateCw, Trash2,
-  ShoppingCart, ChevronRight, Leaf, ZoomIn, ZoomOut, Save,
+  ShoppingCart, ChevronRight, Leaf, ZoomIn, ZoomOut, Save, X,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { Rnd } from 'react-rnd';
@@ -28,6 +30,7 @@ interface CanvasElement {
   fontFamily?: string;
   color?: string;
   textAlign?: 'left' | 'center' | 'right';
+  designId?: string; // Store design ID if from gallery
 }
 
 export function CustomizerPage() {
@@ -50,7 +53,15 @@ export function CustomizerPage() {
   const [showPrintArea, setShowPrintArea] = useState(false); // Ẩn Print Area mặc định
   const [savedDesigns, setSavedDesigns] = useState<any[]>([]);
   const [loadingSavedDesigns, setLoadingSavedDesigns] = useState(false);
+  const [selectedDesignPreview, setSelectedDesignPreview] = useState<any>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Debug: Log when selectedDesignPreview changes (only in development)
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log('selectedDesignPreview changed:', selectedDesignPreview);
+    }
+  }, [selectedDesignPreview]);
 
   // Text settings
   const [textInput, setTextInput] = useState("");
@@ -58,6 +69,7 @@ export function CustomizerPage() {
   const [fontFamily, setFontFamily] = useState("Arial");
   const [textColor, setTextColor] = useState("#000000");
   const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>('center');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load data khi component mount
   useEffect(() => {
@@ -103,10 +115,13 @@ export function CustomizerPage() {
             quantity: 1,
           },
         }) as any;
-        setCalculatedPrice(res.price || 0);
+        // Handle different response formats from backend
+        const price = res.totalPrice || res.price || res.basePrice || 0;
+        setCalculatedPrice(price);
       } catch (e: any) {
         console.error('Error calculating price:', e);
-        // Fallback tính giá thủ công nếu API lỗi
+        // Fallback tính giá thủ công nếu API lỗi (404 hoặc lỗi khác)
+        // Don't show alert - silently fallback to manual calculation
         const basePrice = product?.price || 0;
         const designPrice = 45000;
         setCalculatedPrice(
@@ -130,6 +145,7 @@ export function CustomizerPage() {
       const hashString = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
       const urlParams = new URLSearchParams(hashString);
       const productId = urlParams.get('id') || urlParams.get('productId');
+      const designId = urlParams.get('designId');
 
       if (!productId) {
         setError('Không tìm thấy ID sản phẩm. Vui lòng quay lại trang chủ chọn sản phẩm.');
@@ -146,6 +162,33 @@ export function CustomizerPage() {
       const designsList = designsData.designs || [];
       setDesigns(designsList);
       setDesignCategories(groupDesignsByCategory(designsList));
+
+      // Nếu có designId trong URL, tự động load design vào canvas
+      if (designId) {
+        try {
+          const designData = await apiServices.designs.getById(designId) as any;
+          if (designData) {
+            // Transform design data to match addDesign format
+            const designToAdd = {
+              image: designData.preview_url || designData.image,
+              preview_url: designData.preview_url,
+              imageUrl: designData.assets?.[0]?.file_url,
+              url: designData.preview_url,
+              id: designData.DESIGN_ID || designData.id,
+              assets: designData.assets || [],
+            };
+            // Add design to canvas after a short delay to ensure product is loaded
+            setTimeout(() => {
+              addDesign(designToAdd, designId);
+              // Switch to designs tab to show the added design
+              setActiveTab('designs');
+            }, 500);
+          }
+        } catch (err) {
+          console.warn('Failed to load design from URL:', err);
+          // Don't show error - just continue without pre-loading design
+        }
+      }
 
       // Set default variants
       console.log('📦 Product data:', {
@@ -191,13 +234,18 @@ export function CustomizerPage() {
   const groupDesignsByCategory = (designsList: any[]): any[] => {
     const categoryMap = new Map<string, any[]>();
     designsList.forEach(design => {
-      const category = design.category || 'other';
+      // Ensure category is always a string
+      const category = String(design.category || 'other');
       if (!categoryMap.has(category)) categoryMap.set(category, []);
       categoryMap.get(category)!.push(design);
     });
     const categories: any[] = [];
     categoryMap.forEach((designs, categoryId) => {
-      categories.push({ id: categoryId, name: categoryId.toUpperCase(), designs: designs });
+      // categoryId should always be string now, but add safety check
+      const categoryName = typeof categoryId === 'string' 
+        ? categoryId.toUpperCase() 
+        : String(categoryId || 'UNCATEGORIZED').toUpperCase();
+      categories.push({ id: categoryId, name: categoryName, designs: designs });
     });
     return categories;
   };
@@ -216,20 +264,70 @@ export function CustomizerPage() {
     setTextInput("");
   };
 
-  const addDesign = (design: any) => {
-    // Validate design has an image
-    if (!design.image || design.image.trim() === '') {
-      alert('Hình ảnh thiết kế không hợp lệ');
+  const addDesign = (design: any, designId?: string) => {
+    // Validate design has an image - check multiple possible fields
+    const imageUrl = design.image || design.preview_url || design.imageUrl || design.url || design.assets?.[0]?.file_url || '';
+    if (!imageUrl || imageUrl.trim() === '') {
+      alert('Hình ảnh thiết kế không hợp lệ. Vui lòng chọn thiết kế khác.');
       return;
     }
     const newElement: CanvasElement = {
       id: `design-${Date.now()}`,
       type: 'design',
-      content: design.image || design.preview_url || 'https://placehold.co/100x100',
+      content: imageUrl,
       x: 20, y: 20, width: 100, height: 100, rotation: 0,
+      designId: designId || design.id || design.DESIGN_ID, // Store designId for reference
     };
     setCanvasElements([...canvasElements, newElement]);
     setSelectedElement(newElement.id);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Vui lòng chọn file ảnh hợp lệ (JPG, PNG, GIF, etc.)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Kích thước file quá lớn. Vui lòng chọn file nhỏ hơn 5MB.');
+      return;
+    }
+
+    // Read file as base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageUrl = e.target?.result as string;
+      if (imageUrl) {
+        const newElement: CanvasElement = {
+          id: `image-${Date.now()}`,
+          type: 'image',
+          content: imageUrl,
+          x: 20, y: 20, width: 150, height: 150, rotation: 0,
+        };
+        setCanvasElements([...canvasElements, newElement]);
+        setSelectedElement(newElement.id);
+        // Switch to designs tab to see the uploaded image
+        setActiveTab('designs');
+      }
+    };
+    reader.onerror = () => {
+      alert('Lỗi khi đọc file. Vui lòng thử lại.');
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click();
   };
 
   const deleteSelectedElement = () => {
@@ -313,6 +411,7 @@ export function CustomizerPage() {
                 fontFamily: el.fontFamily,
                 color: el.color || textColor,
                 textAlign: el.textAlign || textAlign,
+                designId: el.designId, // Include designId if from gallery
               })),
               previewImage: previewImage,
               canvasWidth: 500,
@@ -325,6 +424,9 @@ export function CustomizerPage() {
       // Use ColorCode for SKU variant lookup
       const colorCode = selectedColor.ColorCode || selectedColor.name || 'BLACK';
       
+      // Extract designId from elements if any design from gallery is used
+      const designIdFromElements = validElements.find((el) => el.designId)?.designId;
+      
       await apiServices.cart.addItem(
         {
           productId: product.id,
@@ -332,6 +434,7 @@ export function CustomizerPage() {
           colorCode: colorCode,
           sizeCode: selectedSize,
           customDesignData: customDesignData,
+          designId: designIdFromElements || undefined, // Include designId if from gallery
         },
         token,
       );
@@ -429,6 +532,12 @@ export function CustomizerPage() {
 
       alert('✅ Đã lưu thiết kế thành công!');
       console.log('Saved design:', savedDesign);
+      
+      // Reload saved designs list
+      await loadSavedDesigns();
+      
+      // Auto-switch to saved tab to show the newly saved design
+      setActiveTab('saved');
     } catch (err: any) {
       console.error('Error saving design:', err);
       const errorMessage =
@@ -512,14 +621,14 @@ export function CustomizerPage() {
       <div className="flex-1 flex overflow-hidden">
         
         {/* === SIDEBAR TRÁI: CÔNG CỤ === */}
-        <aside className="w-[320px] flex flex-col border-r bg-white z-20">
+        <aside className="w-[320px] flex flex-col border-r bg-white z-20 overflow-hidden">
           <Tabs value={activeTab} onValueChange={(val) => {
             setActiveTab(val);
             if (val === 'saved') {
               loadSavedDesigns();
             }
-          }} className="w-full flex-1 flex flex-col">
-            <div className="px-2 pt-2 border-b">
+          }} className="w-full flex-1 flex flex-col overflow-hidden">
+            <div className="px-2 pt-2 border-b flex-shrink-0">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="upload"><Upload className="w-4 h-4" /></TabsTrigger>
                 <TabsTrigger value="text"><Type className="w-4 h-4" /></TabsTrigger>
@@ -528,11 +637,22 @@ export function CustomizerPage() {
               </TabsList>
             </div>
             
-            <div className="p-4 flex-1 overflow-y-auto">
+            <div className="p-3 flex-1 overflow-y-auto overflow-x-hidden">
               <TabsContent value="upload" className="mt-0">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 cursor-pointer">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <div 
+                  onClick={triggerFileUpload}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 cursor-pointer transition-colors"
+                >
                   <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm font-medium">Tải ảnh lên</p>
+                  <p className="text-sm font-medium text-gray-700">Tải ảnh lên</p>
+                  <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF (tối đa 5MB)</p>
                 </div>
               </TabsContent>
 
@@ -558,18 +678,35 @@ export function CustomizerPage() {
                 <button onClick={addText} className="w-full bg-black text-white py-2 rounded hover:bg-gray-800 font-medium">Thêm Chữ</button>
               </TabsContent>
 
-              <TabsContent value="designs" className="mt-0 space-y-4">
+              <TabsContent value="designs" className="mt-0 space-y-2 overflow-y-auto overflow-x-hidden">
                 {designCategories.map((cat, idx) => (
-                  <div key={idx}>
-                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">{cat.name}</h4>
-                    <div className="grid grid-cols-3 gap-2">
+                  <div key={idx} className="mb-2">
+                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-1 px-1">{String(cat.name || 'UNCATEGORIZED')}</h4>
+                    <div className="grid grid-cols-3 gap-1">
                       {cat.designs.map((d: any, i: number) => (
-                        <img 
-                          key={i} 
-                          src={d.image} 
-                          className="w-full aspect-square object-cover rounded border hover:border-black cursor-pointer bg-gray-50"
-                          onClick={() => addDesign(d)}
-                        />
+                        <div
+                          key={i}
+                          className="relative group cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            console.log('Design clicked:', d);
+                            setSelectedDesignPreview(d);
+                          }}
+                        >
+                          <img 
+                            src={d.image || d.preview_url || d.assets?.[0]?.file_url} 
+                            className="w-full h-16 object-cover rounded border border-gray-200 hover:border-[#ca6946] cursor-pointer bg-gray-50 transition-all"
+                            alt={d.title || d.name || 'Design'}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100?text=No+Image';
+                            }}
+                          />
+                          {/* Hover overlay */}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <span className="text-white text-xs font-medium px-1.5 py-0.5 bg-[#ca6946] rounded shadow-md">Xem</span>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -691,7 +828,7 @@ export function CustomizerPage() {
                            });
                         }}
                         bounds="parent"
-                        lockAspectRatio={el.type === 'design'}
+                        lockAspectRatio={el.type === 'design' || el.type === 'image'}
                         className={`cursor-move ${selectedElement === el.id ? 'ring-2 ring-blue-500' : 'hover:ring-1 hover:ring-blue-300'}`}
                         onClick={(e) => { e.stopPropagation(); setSelectedElement(el.id); }}
                         style={{ zIndex: selectedElement === el.id ? 50 : 10 }}
@@ -900,6 +1037,79 @@ export function CustomizerPage() {
         </aside>
 
       </div>
+
+      {/* Design Preview Modal - Custom implementation to avoid Dialog issues */}
+      {selectedDesignPreview && (
+        <div 
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setSelectedDesignPreview(null)}
+          style={{ position: 'fixed', zIndex: 99999 }}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto mx-4 relative"
+            onClick={(e) => e.stopPropagation()}
+            style={{ position: 'relative', zIndex: 100000 }}
+          >
+            {/* Header */}
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+              <div>
+                <h2 className="text-lg font-bold">
+                  {selectedDesignPreview?.title || selectedDesignPreview?.name || 'Xem trước thiết kế'}
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {selectedDesignPreview?.description || 'Xem trước thiết kế trước khi thêm vào canvas'}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedDesignPreview(null)}
+                className="text-gray-500 hover:text-gray-700 text-2xl leading-none w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 transition-colors"
+                aria-label="Đóng"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-center bg-gray-50 rounded-lg p-4 min-h-[300px]">
+                <img 
+                  src={selectedDesignPreview?.image || selectedDesignPreview?.preview_url || selectedDesignPreview?.assets?.[0]?.file_url} 
+                  alt={selectedDesignPreview?.title || 'Design preview'}
+                  className="max-w-full max-h-[60vh] object-contain rounded-lg border"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400?text=No+Image';
+                  }}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    if (import.meta.env.DEV) {
+                      console.log('Adding design to canvas:', selectedDesignPreview);
+                    }
+                    if (selectedDesignPreview) {
+                      addDesign(selectedDesignPreview, selectedDesignPreview.DESIGN_ID || selectedDesignPreview.id);
+                      setSelectedDesignPreview(null);
+                    }
+                  }}
+                  className="flex-1 bg-[#ca6946] hover:bg-[#b55835] text-white font-medium py-2.5 px-4 rounded-lg transition-colors"
+                >
+                  Thêm vào canvas
+                </button>
+                <button
+                  onClick={() => {
+                    console.log('Closing modal');
+                    setSelectedDesignPreview(null);
+                  }}
+                  className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2.5 px-4 rounded-lg transition-colors"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

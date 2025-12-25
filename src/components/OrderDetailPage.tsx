@@ -32,24 +32,25 @@ const statusConfig: Record<string, { label: string; icon: any; color: string }> 
 };
 
 export function OrderDetailPage() {
-    const { token } = useAuth();
+    const { token, getToken } = useAuth();
     const [order, setOrder] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (token) {
-            loadOrder();
-        } else {
-            window.location.hash = '#login';
-        }
-    }, [token]);
+        loadOrder();
+    }, []);
 
     const loadOrder = async () => {
         try {
             setLoading(true);
             setError(null);
-            if (!token) return;
+            const currentToken = token || getToken();
+            if (!currentToken) {
+                setError('Vui lòng đăng nhập để xem chi tiết đơn hàng');
+                setLoading(false);
+                return;
+            }
 
             const urlParams = new URLSearchParams(window.location.hash.replace('#order-detail?', ''));
             const orderId = urlParams.get('id');
@@ -59,7 +60,7 @@ export function OrderDetailPage() {
                 return;
             }
 
-            const orderData = await apiServices.orders.getById(orderId, token);
+            const orderData = await apiServices.orders.getById(orderId, currentToken);
             setOrder(orderData);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Không thể tải chi tiết đơn hàng');

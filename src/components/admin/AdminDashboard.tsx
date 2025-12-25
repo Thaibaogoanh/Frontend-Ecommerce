@@ -41,6 +41,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Loading } from '../ui/loading';
 import { ErrorDisplay } from '../ui/error';
 import { toast } from "sonner";
+import { Pagination } from '../shared/Pagination';
 
 const mockOrders = [
   { id: "ORD-2024-156", customer: "Nguyễn Văn A", date: "2024-11-07", status: "Processing", total: 749000, items: 1 },
@@ -79,7 +80,6 @@ export function AdminDashboard() {
   const [assets, setAssets] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
-  const [vouchers, setVouchers] = useState<any[]>([]);
   const [rewardCatalog, setRewardCatalog] = useState<any[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   
@@ -99,6 +99,17 @@ export function AdminDashboard() {
   const [orderSearch, setOrderSearch] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
   const [designStatusFilter, setDesignStatusFilter] = useState<string>('all');
+  
+  // Pagination states
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersTotalPages, setOrdersTotalPages] = useState(1);
+  const [productsPage, setProductsPage] = useState(1);
+  const [productsTotalPages, setProductsTotalPages] = useState(1);
+  const [designsPage, setDesignsPage] = useState(1);
+  const [designsTotalPages, setDesignsTotalPages] = useState(1);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersTotalPages, setUsersTotalPages] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
     if (token && user?.role === 'admin') {
@@ -109,10 +120,60 @@ export function AdminDashboard() {
     }
   }, [token, user]);
 
-  // Debug dialog state
+  // Load paginated data when page or filters change
   useEffect(() => {
-    console.log('Dialog state changed:', { isDialogOpen, dialogType, formData });
-  }, [isDialogOpen, dialogType, formData]);
+    if (token && user?.role === 'admin' && activeTab === 'orders') {
+      setOrdersPage(1); // Reset to page 1 when filter changes
+      loadOrdersPage();
+    }
+  }, [orderStatusFilter, orderSearch, token, user, activeTab]);
+
+  useEffect(() => {
+    if (token && user?.role === 'admin' && activeTab === 'orders' && ordersPage > 0) {
+      loadOrdersPage();
+    }
+  }, [ordersPage]);
+
+  useEffect(() => {
+    if (token && user?.role === 'admin' && activeTab === 'products') {
+      setProductsPage(1);
+      loadProductsPage();
+    }
+  }, [productCategoryFilter, productSearch, token, user, activeTab]);
+
+  useEffect(() => {
+    if (token && user?.role === 'admin' && activeTab === 'products' && productsPage > 0) {
+      loadProductsPage();
+    }
+  }, [productsPage]);
+
+  useEffect(() => {
+    if (token && user?.role === 'admin' && activeTab === 'designs') {
+      setDesignsPage(1);
+      loadDesignsPage();
+    }
+  }, [designStatusFilter, token, user, activeTab]);
+
+  useEffect(() => {
+    if (token && user?.role === 'admin' && activeTab === 'designs' && designsPage > 0) {
+      loadDesignsPage();
+    }
+  }, [designsPage]);
+
+  useEffect(() => {
+    if (token && user?.role === 'admin' && activeTab === 'users') {
+      setUsersPage(1);
+      loadUsersPage();
+    }
+  }, [userRoleFilter, userSearch, token, user, activeTab]);
+
+  useEffect(() => {
+    if (token && user?.role === 'admin' && activeTab === 'users' && usersPage > 0) {
+      loadUsersPage();
+    }
+  }, [usersPage]);
+
+  // Debug dialog state - REMOVED to prevent console spam
 
   const loadAdminData = async () => {
     try {
@@ -123,6 +184,10 @@ export function AdminDashboard() {
       // Load all data in parallel
       const results = await Promise.all([
         apiServices.orders.getAll(token).catch(() => ({ orders: [] })),
+        // Orders Stats
+        apiServices.orders.getStats(token).catch(() => null),
+        // Users Stats
+        apiServices.users.getStats(token).catch(() => null),
         apiServices.products.getAll(1, 100).catch(() => ({ products: [] })),
         apiServices.designs.getAll(1, 100).catch(() => ({ designs: [] })),
         apiServices.inventory.getStock(token).catch(() => ({ stock: [] })),
@@ -136,8 +201,6 @@ export function AdminDashboard() {
         apiServices.categories.getAll().catch(() => []),
         // Admin user list
         apiServices.users.getAll(token, { page: 1, limit: 100 }).catch(() => ({ users: [], total: 0 })),
-        // Vouchers admin (if available)
-        apiServices.vouchers.getAll(token).catch(() => []),
         // Reward catalog admin (if available)
         apiServices.rewards.catalogGetAll(token).catch(() => []),
         // Payment methods
@@ -146,6 +209,8 @@ export function AdminDashboard() {
 
       const [
         ordersData,
+        ordersStatsData,
+        usersStatsData,
         productsData,
         designsData,
         inventoryData,
@@ -158,7 +223,6 @@ export function AdminDashboard() {
         assetsData,
         categoriesData,
         usersData,
-        vouchersData,
         rewardCatalogData,
         paymentMethodsData,
       ] = results as any[];
@@ -180,18 +244,28 @@ export function AdminDashboard() {
       setAssets(assetsData.assets || assetsData || []);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       setUsersList(usersData?.users || usersData || []);
-      setVouchers(Array.isArray(vouchersData) ? vouchersData : []);
       setRewardCatalog(Array.isArray(rewardCatalogData) ? rewardCatalogData : []);
       setPaymentMethods(Array.isArray(paymentMethodsData) ? paymentMethodsData : []);
 
-      // Calculate stats
-      const totalRevenue = ordersList.reduce((sum: number, o: any) => sum + (o.Total || o.total || 0), 0);
-      const totalOrders = ordersList.length;
+      // Calculate stats from API data
+      const revenue = ordersStatsData?.totalRevenue 
+        ? (typeof ordersStatsData.totalRevenue === 'string' ? parseFloat(ordersStatsData.totalRevenue) : Number(ordersStatsData.totalRevenue) || 0)
+        : ordersList.reduce((sum: number, o: any) => {
+            const total = o.totalAmount || o.Total || o.total || 0;
+            return sum + (typeof total === 'string' ? parseFloat(total) : Number(total) || 0);
+          }, 0);
+      
+      const totalOrders = ordersStatsData?.totalOrders || ordersList.length;
+      const activeUsers = usersStatsData?.activeUsers || usersList.filter((u: any) => u.isActive !== false).length || 0;
+      
+      // Calculate CO2 saved: approximate 2kg CO2 per order (or null if no orders)
+      const co2Saved = ordersList.length > 0 ? ordersList.length * 2 : null;
+      
       setStats({
-        revenue: totalRevenue,
+        revenue,
         orders: totalOrders,
-        users: 1234, // Would need users API
-        co2Saved: 890
+        users: activeUsers,
+        co2Saved
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể tải dữ liệu quản trị';
@@ -202,12 +276,85 @@ export function AdminDashboard() {
     }
   };
 
+  // Load paginated data functions
+  const loadOrdersPage = async () => {
+    try {
+      if (!token) return;
+      const params: any = { page: ordersPage, limit: ITEMS_PER_PAGE };
+      if (orderStatusFilter !== 'all') {
+        params.status = orderStatusFilter;
+      }
+      const response = await apiServices.orders.getAll(token, params) as any;
+      const ordersList = response.orders || [];
+      setOrders(ordersList);
+      setOrdersTotalPages(response.totalPages || 1);
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+    }
+  };
+
+  const loadProductsPage = async () => {
+    try {
+      if (!token) return;
+      const params: any = {};
+      if (productCategoryFilter !== 'all') {
+        params.categoryId = productCategoryFilter;
+      }
+      if (productSearch) {
+        params.search = productSearch;
+      }
+      const response = await apiServices.products.getAll(productsPage, ITEMS_PER_PAGE, params) as any;
+      const productsList = response.products || [];
+      setProducts(productsList);
+      setProductsTotalPages(response.totalPages || 1);
+    } catch (err) {
+      console.error('Failed to load products:', err);
+    }
+  };
+
+  const loadDesignsPage = async () => {
+    try {
+      if (!token) return;
+      const offset = (designsPage - 1) * ITEMS_PER_PAGE;
+      const params: any = { limit: ITEMS_PER_PAGE, offset };
+      if (designStatusFilter !== 'all') {
+        params.status = designStatusFilter;
+      }
+      const response = await apiServices.designs.getAll(designsPage, ITEMS_PER_PAGE, params) as any;
+      const designsList = response.designs || response || [];
+      setDesigns(designsList);
+      const total = response.total || designsList.length;
+      setDesignsTotalPages(Math.ceil(total / ITEMS_PER_PAGE));
+    } catch (err) {
+      console.error('Failed to load designs:', err);
+    }
+  };
+
+  const loadUsersPage = async () => {
+    try {
+      if (!token) return;
+      const params: any = { page: usersPage, limit: ITEMS_PER_PAGE };
+      if (userRoleFilter !== 'all') {
+        params.role = userRoleFilter;
+      }
+      if (userSearch) {
+        params.search = userSearch;
+      }
+      const response = await apiServices.users.getAll(token, params) as any;
+      const usersList = response.users || [];
+      setUsersList(usersList);
+      setUsersTotalPages(response.totalPages || 1);
+    } catch (err) {
+      console.error('Failed to load users:', err);
+    }
+  };
+
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       if (!token) return;
       await apiServices.admin.updateOrderStatus(orderId, newStatus, token);
       toast.success('Đã cập nhật trạng thái đơn hàng');
-      await loadAdminData(); // Reload data
+      await loadOrdersPage(); // Reload current page
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể cập nhật đơn hàng';
       setError(msg);
@@ -388,54 +535,6 @@ export function AdminDashboard() {
       handleCloseDialog();
     } catch (err: any) {
       const msg = err?.message || 'Không thể lưu người dùng';
-      setError(msg);
-      toast.error(msg);
-    }
-  };
-
-  // Voucher CRUD handlers
-  const handleSaveVoucher = async () => {
-    try {
-      if (!token) return;
-      setError(null);
-      
-      if (!formData.code || !formData.code.trim()) {
-        const msg = 'Vui lòng nhập mã voucher';
-        setError(msg);
-        toast.error(msg);
-        return;
-      }
-      if (!formData.value || formData.value <= 0) {
-        const msg = 'Vui lòng nhập giá trị giảm giá hợp lệ';
-        setError(msg);
-        toast.error(msg);
-        return;
-      }
-      
-      const dataToSend = {
-        code: formData.code.trim().toUpperCase(),
-        type: formData.type || 'PERCENTAGE',
-        value: Number(formData.value),
-        minOrderAmount: Number(formData.minOrderAmount) || 0,
-        maxUses: Number(formData.maxUses) || 100,
-        maxUsesPerUser: Number(formData.maxUsesPerUser) || 1,
-        validFrom: formData.validFrom ? new Date(formData.validFrom).toISOString() : new Date().toISOString(),
-        validUntil: formData.validUntil ? new Date(formData.validUntil).toISOString() : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        status: formData.status || 'ACTIVE',
-      };
-      
-      if (dialogType === 'create-voucher') {
-        await apiServices.vouchers.create(dataToSend, token);
-        toast.success('Đã tạo voucher mới');
-      } else if (dialogType === 'edit-voucher' && editingItem) {
-        await apiServices.vouchers.update(editingItem.id, dataToSend, token);
-        toast.success('Đã cập nhật voucher');
-      }
-      
-      await loadAdminData();
-      handleCloseDialog();
-    } catch (err: any) {
-      const msg = err?.message || 'Không thể lưu voucher. Backend có thể chưa hỗ trợ admin CRUD vouchers.';
       setError(msg);
       toast.error(msg);
     }
@@ -626,23 +725,17 @@ export function AdminDashboard() {
     return matchesSearch && matchesCategory;
   });
 
-  // Filter orders
+  // Filter orders (client-side search only, status filter is server-side)
   const filteredOrders = orders.filter((order: any) => {
     const matchesSearch = !orderSearch || 
       order.id?.toLowerCase().includes(orderSearch.toLowerCase()) ||
       (typeof order.customer === 'object' ? order.customer.email : order.customer)?.toLowerCase().includes(orderSearch.toLowerCase()) ||
       order.user?.email?.toLowerCase().includes(orderSearch.toLowerCase());
-    const matchesStatus = orderStatusFilter === 'all' || 
-      (order.Status || order.status || '').toLowerCase() === orderStatusFilter.toLowerCase();
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
-  // Filter designs
-  const filteredDesigns = designs.filter((design: any) => {
-    const matchesStatus = designStatusFilter === 'all' || 
-      (design.status || '').toLowerCase() === designStatusFilter.toLowerCase();
-    return matchesStatus;
-  });
+  // Designs are already filtered server-side
+  const filteredDesigns = designs;
 
   if (error && !token) {
     return (
@@ -853,7 +946,6 @@ export function AdminDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="font-bold text-2xl">{(stats?.revenue || 0).toLocaleString('vi-VN')}₫</div>
-                    <p className="text-xs text-green-600 mt-1">+12.5% so với tháng trước</p>
                   </CardContent>
                 </Card>
 
@@ -864,7 +956,6 @@ export function AdminDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="font-bold text-2xl">{stats?.orders || orders.length}</div>
-                    <p className="text-xs text-green-600 mt-1">+8.2% so với tháng trước</p>
                   </CardContent>
                 </Card>
 
@@ -874,8 +965,7 @@ export function AdminDashboard() {
                     <Users className="w-4 h-4 text-gray-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="font-bold text-2xl">{stats?.users || 1234}</div>
-                    <p className="text-xs text-green-600 mt-1">+15.3% so với tháng trước</p>
+                    <div className="font-bold text-2xl">{stats?.users || 0}</div>
                   </CardContent>
                 </Card>
 
@@ -885,8 +975,14 @@ export function AdminDashboard() {
                     <Leaf className="w-4 h-4 text-green-600" />
                   </CardHeader>
                   <CardContent>
-                    <div className="font-bold text-2xl">{stats?.co2Saved || 890}kg</div>
-                    <p className="text-xs text-gray-600 mt-1">CO₂ Tiết kiệm tháng này</p>
+                    {stats?.co2Saved !== null && stats?.co2Saved !== undefined ? (
+                      <>
+                        <div className="font-bold text-2xl">{stats.co2Saved}kg</div>
+                        <p className="text-xs text-gray-600 mt-1">CO₂ Tiết kiệm (ước tính)</p>
+                      </>
+                    ) : (
+                      <div className="text-gray-400 text-sm">Chưa có dữ liệu</div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -912,7 +1008,13 @@ export function AdminDashboard() {
                         <Badge variant={order.status === "Processing" ? "default" : order.status === "Shipped" ? "outline" : "secondary"}>
                           {order.status}
                         </Badge>
-                        <p className="font-bold">{(order.total || order.Total || 0).toLocaleString('vi-VN')}₫</p>
+                        <p className="font-bold">
+                          {(() => {
+                            const total = order.totalAmount || order.Total || order.total || 0;
+                            const totalNum = typeof total === 'string' ? parseFloat(total) : Number(total) || 0;
+                            return totalNum.toLocaleString('vi-VN') + '₫';
+                          })()}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -933,10 +1035,16 @@ export function AdminDashboard() {
                       placeholder="Tìm kiếm đơn hàng..." 
                       className="pl-10"
                       value={orderSearch}
-                      onChange={(e) => setOrderSearch(e.target.value)}
+                      onChange={(e) => {
+                        setOrderSearch(e.target.value);
+                        setOrdersPage(1);
+                      }}
                     />
                   </div>
-                  <Select value={orderStatusFilter} onValueChange={setOrderStatusFilter}>
+                  <Select value={orderStatusFilter} onValueChange={(value) => {
+                    setOrderStatusFilter(value);
+                    setOrdersPage(1); // Reset to page 1 when filter changes
+                  }}>
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Tất cả trạng thái" />
                     </SelectTrigger>
@@ -985,7 +1093,13 @@ export function AdminDashboard() {
                               <td className="p-4">
                                 <Badge>{order.Status || order.status || 'Pending'}</Badge>
                               </td>
-                              <td className="p-4 font-bold">{(order.Total || order.total || 0).toLocaleString('vi-VN')}₫</td>
+                              <td className="p-4 font-bold">
+                                {(() => {
+                                  const total = order.totalAmount || order.Total || order.total || 0;
+                                  const totalNum = typeof total === 'string' ? parseFloat(total) : Number(total) || 0;
+                                  return totalNum.toLocaleString('vi-VN') + '₫';
+                                })()}
+                              </td>
                               <td className="p-4">
                                 <div className="flex gap-2">
                                   <button
@@ -1035,10 +1149,16 @@ export function AdminDashboard() {
                     placeholder="Tìm kiếm sản phẩm..." 
                     className="pl-10"
                     value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
+                    onChange={(e) => {
+                      setProductSearch(e.target.value);
+                      setProductsPage(1);
+                    }}
                   />
                 </div>
-                <Select value={productCategoryFilter} onValueChange={setProductCategoryFilter}>
+                <Select value={productCategoryFilter} onValueChange={(value) => {
+                  setProductCategoryFilter(value);
+                  setProductsPage(1);
+                }}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Tất cả danh mục" />
                   </SelectTrigger>
@@ -1119,6 +1239,17 @@ export function AdminDashboard() {
                 </CardContent>
               </Card>
 
+              {/* Pagination */}
+              {productsTotalPages > 1 && (
+                <div className="mt-6">
+                  <Pagination
+                    currentPage={productsPage}
+                    totalPages={productsTotalPages}
+                    onPageChange={setProductsPage}
+                    maxVisiblePages={5}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -1128,7 +1259,10 @@ export function AdminDashboard() {
               <div className="flex items-center justify-between mb-8">
                 <h2 className="font-['Lora']">Quản lý thiết kế</h2>
                 <div className="flex gap-3">
-                  <Select value={designStatusFilter} onValueChange={setDesignStatusFilter}>
+                  <Select value={designStatusFilter} onValueChange={(value) => {
+                    setDesignStatusFilter(value);
+                    setDesignsPage(1);
+                  }}>
                     <SelectTrigger className="w-40">
                       <SelectValue placeholder="Tất cả trạng thái" />
                     </SelectTrigger>
@@ -1185,6 +1319,18 @@ export function AdminDashboard() {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              )}
+
+              {/* Pagination */}
+              {designsTotalPages > 1 && (
+                <div className="mt-6">
+                  <Pagination
+                    currentPage={designsPage}
+                    totalPages={designsTotalPages}
+                    onPageChange={setDesignsPage}
+                    maxVisiblePages={5}
+                  />
                 </div>
               )}
             </div>
@@ -1369,212 +1515,101 @@ export function AdminDashboard() {
             <div>
               <h2 className="font-['Lora'] mb-8">Quản lý phần thưởng</h2>
 
-              <Tabs defaultValue="vouchers">
-                <TabsList>
-                  <TabsTrigger value="vouchers">Voucher</TabsTrigger>
-                  <TabsTrigger value="points">Điểm Xanh</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="vouchers" className="mt-6">
-                  <Card>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
-                      <CardTitle>Quản lý Voucher</CardTitle>
-                          <CardDescription>Tạo và quản lý mã giảm giá</CardDescription>
-                        </div>
-                        <Button
-                          onClick={() => {
-                            setDialogType('create-voucher');
-                            setEditingItem(null);
-                            setFormData({
-                              code: '',
-                              type: 'PERCENTAGE',
-                              value: 0,
-                              minOrderAmount: 0,
-                              maxUses: 100,
-                              maxUsesPerUser: 1,
-                              validFrom: new Date().toISOString().split('T')[0],
-                              validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                              status: 'ACTIVE',
-                            });
-                            setIsDialogOpen(true);
-                          }}
-                          className="bg-[#ca6946] hover:bg-[#b55835] text-white"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Tạo Voucher
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {vouchers.length === 0 ? (
-                        <div className="text-center py-12 text-gray-500">
-                          <p>Chưa có voucher nào. Hãy tạo voucher mới để bắt đầu.</p>
-                          <p className="text-sm mt-2">Lưu ý: Backend có thể chưa hỗ trợ admin CRUD vouchers.</p>
-                        </div>
-                      ) : (
-                      <div className="space-y-4">
-                          {vouchers.map((voucher: any) => (
-                            <div key={voucher.id} className="flex items-center justify-between p-4 border rounded-lg">
-                              <div className="flex-1">
-                                <p className="font-bold text-lg">{voucher.code}</p>
-                                <p className="text-sm text-gray-600">
-                                  {voucher.type === 'PERCENTAGE' ? `${voucher.value}%` : `${voucher.value.toLocaleString('vi-VN')}₫`} off
-                                  {voucher.minOrderAmount > 0 && ` • Tối thiểu ${voucher.minOrderAmount.toLocaleString('vi-VN')}₫`}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  HSD: {voucher.validUntil ? new Date(voucher.validUntil).toLocaleDateString('vi-VN') : 'N/A'}
-                                  {voucher.maxUses && ` • Giới hạn: ${voucher.maxUses} lần`}
-                                </p>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setDialogType('edit-voucher');
-                                    setEditingItem(voucher);
-                                    setFormData({
-                                      code: voucher.code,
-                                      type: voucher.type,
-                                      value: voucher.value,
-                                      minOrderAmount: voucher.minOrderAmount || 0,
-                                      maxUses: voucher.maxUses,
-                                      maxUsesPerUser: voucher.maxUsesPerUser,
-                                      validFrom: voucher.validFrom ? new Date(voucher.validFrom).toISOString().split('T')[0] : '',
-                                      validUntil: voucher.validUntil ? new Date(voucher.validUntil).toISOString().split('T')[0] : '',
-                                      status: voucher.status,
-                                    });
-                                    setIsDialogOpen(true);
-                                  }}
-                                >
-                                <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={async () => {
-                                    if (!confirm(`Bạn có chắc muốn xóa voucher ${voucher.code}?`)) return;
-                                    if (!token) return;
-                                    try {
-                                      await apiServices.vouchers.delete(voucher.id, token);
-                                      toast.success('Đã xóa voucher');
-                                      loadAdminData();
-                                    } catch (err: any) {
-                                      toast.error('Không thể xóa voucher: ' + (err?.message || 'Backend có thể chưa hỗ trợ admin CRUD vouchers'));
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="w-4 h-4 text-red-600" />
-                                </Button>
-                            </div>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Danh mục Phần thưởng</CardTitle>
+                      <CardDescription>Quản lý phần thưởng có thể đổi bằng điểm (bao gồm voucher, giảm giá, sản phẩm miễn phí)</CardDescription>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        setDialogType('create-reward');
+                        setEditingItem(null);
+                        setFormData({
+                          name: '',
+                          description: '',
+                          pointsRequired: 0,
+                          type: 'voucher',
+                          discountValue: 0,
+                          minOrderAmount: 0,
+                          isActive: true,
+                        });
+                        setIsDialogOpen(true);
+                      }}
+                      className="bg-[#ca6946] hover:bg-[#b55835] text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Thêm phần thưởng
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {rewardCatalog.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <p>Chưa có phần thưởng nào. Hãy thêm phần thưởng mới để bắt đầu.</p>
+                      <p className="text-sm mt-2">Lưu ý: Backend có thể chưa hỗ trợ admin CRUD reward catalog.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {rewardCatalog.map((reward: any) => (
+                        <div key={reward.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-bold text-lg">{reward.name}</p>
+                            <p className="text-sm text-gray-600">{reward.description}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {reward.pointsRequired} điểm • {reward.type === 'voucher' ? 'Voucher' : reward.type}
+                              {reward.discountValue > 0 && ` • Giảm ${reward.discountValue}${reward.type === 'PERCENTAGE' ? '%' : '₫'}`}
+                            </p>
                           </div>
-                        ))}
-                      </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="points" className="mt-6">
-                  <Card>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                      <div>
-                          <CardTitle>Danh mục Phần thưởng</CardTitle>
-                          <CardDescription>Quản lý phần thưởng có thể đổi bằng điểm</CardDescription>
-                      </div>
-                        <Button
-                          onClick={() => {
-                            setDialogType('create-reward');
-                            setEditingItem(null);
-                            setFormData({
-                              name: '',
-                              description: '',
-                              pointsRequired: 0,
-                              type: 'voucher',
-                              discountValue: 0,
-                              minOrderAmount: 0,
-                              isActive: true,
-                            });
-                            setIsDialogOpen(true);
-                          }}
-                          className="bg-[#ca6946] hover:bg-[#b55835] text-white"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Thêm phần thưởng
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {rewardCatalog.length === 0 ? (
-                        <div className="text-center py-12 text-gray-500">
-                          <p>Chưa có phần thưởng nào. Hãy thêm phần thưởng mới để bắt đầu.</p>
-                          <p className="text-sm mt-2">Lưu ý: Backend có thể chưa hỗ trợ admin CRUD reward catalog.</p>
-                      </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {rewardCatalog.map((reward: any) => (
-                            <div key={reward.id} className="flex items-center justify-between p-4 border rounded-lg">
-                              <div className="flex-1">
-                                <p className="font-bold text-lg">{reward.name}</p>
-                                <p className="text-sm text-gray-600">{reward.description}</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {reward.pointsRequired} điểm • {reward.type === 'voucher' ? 'Voucher' : reward.type}
-                                  {reward.discountValue > 0 && ` • Giảm ${reward.discountValue}${reward.type === 'PERCENTAGE' ? '%' : '₫'}`}
-                                </p>
-                              </div>
-                              <div className="flex gap-2">
-                                <Badge variant={reward.isActive ? 'default' : 'secondary'}>
-                                  {reward.isActive ? 'Hoạt động' : 'Tạm ngưng'}
-                                </Badge>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setDialogType('edit-reward');
-                                    setEditingItem(reward);
-                                    setFormData({
-                                      name: reward.name,
-                                      description: reward.description,
-                                      pointsRequired: reward.pointsRequired,
-                                      type: reward.type,
-                                      discountValue: reward.discountValue || 0,
-                                      minOrderAmount: reward.minOrderAmount || 0,
-                                      isActive: reward.isActive !== false,
-                                    });
-                                    setIsDialogOpen(true);
-                                  }}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={async () => {
-                                    if (!confirm(`Bạn có chắc muốn xóa phần thưởng ${reward.name}?`)) return;
-                                    if (!token) return;
-                                    try {
-                                      await apiServices.rewards.catalogDelete(reward.id, token);
-                                      toast.success('Đã xóa phần thưởng');
-                                      loadAdminData();
-                                    } catch (err: any) {
-                                      toast.error('Không thể xóa phần thưởng: ' + (err?.message || 'Backend có thể chưa hỗ trợ admin CRUD reward catalog'));
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="w-4 h-4 text-red-600" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
+                          <div className="flex gap-2">
+                            <Badge variant={reward.isActive ? 'default' : 'secondary'}>
+                              {reward.isActive ? 'Hoạt động' : 'Tạm ngưng'}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setDialogType('edit-reward');
+                                setEditingItem(reward);
+                                setFormData({
+                                  name: reward.name,
+                                  description: reward.description,
+                                  pointsRequired: reward.pointsRequired,
+                                  type: reward.type,
+                                  discountValue: reward.discountValue || 0,
+                                  minOrderAmount: reward.minOrderAmount || 0,
+                                  isActive: reward.isActive !== false,
+                                });
+                                setIsDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                if (!confirm(`Bạn có chắc muốn xóa phần thưởng ${reward.name}?`)) return;
+                                if (!token) return;
+                                try {
+                                  await apiServices.rewards.catalogDelete(reward.id, token);
+                                  toast.success('Đã xóa phần thưởng');
+                                  loadAdminData();
+                                } catch (err: any) {
+                                  toast.error('Không thể xóa phần thưởng: ' + (err?.message || 'Backend có thể chưa hỗ trợ admin CRUD reward catalog'));
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </Button>
+                          </div>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           )}
 
@@ -1605,10 +1640,16 @@ export function AdminDashboard() {
                     placeholder="Tìm kiếm theo email, tên..."
                     className="pl-10"
                     value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
+                    onChange={(e) => {
+                      setUserSearch(e.target.value);
+                      setUsersPage(1);
+                    }}
                   />
                 </div>
-                <Select value={userRoleFilter} onValueChange={setUserRoleFilter}>
+                <Select value={userRoleFilter} onValueChange={(value) => {
+                  setUserRoleFilter(value);
+                  setUsersPage(1);
+                }}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Lọc theo vai trò" />
                   </SelectTrigger>
@@ -1636,16 +1677,14 @@ export function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {usersList
-                          .filter((u: any) => {
-                            const searchLower = userSearch.toLowerCase();
-                            const matchesSearch = !userSearch || 
-                              u.email?.toLowerCase().includes(searchLower) ||
-                              u.name?.toLowerCase().includes(searchLower);
-                            const matchesRole = userRoleFilter === 'all' || u.role === userRoleFilter;
-                            return matchesSearch && matchesRole;
-                          })
-                          .map((user: any) => (
+                        {usersList.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                              Không có người dùng nào
+                            </td>
+                          </tr>
+                        ) : (
+                          usersList.map((user: any) => (
                             <tr key={user.id} className="hover:bg-gray-50">
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.email}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.name || 'N/A'}</td>
@@ -1737,17 +1776,25 @@ export function AdminDashboard() {
                                 </div>
                               </td>
                             </tr>
-                          ))}
+                          ))
+                        )}
                       </tbody>
                     </table>
-                    {usersList.length === 0 && (
-                      <div className="text-center py-12 text-gray-500">
-                        Không có người dùng nào
-                      </div>
-                    )}
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Pagination */}
+              {usersTotalPages > 1 && (
+                <div className="mt-6">
+                  <Pagination
+                    currentPage={usersPage}
+                    totalPages={usersTotalPages}
+                    onPageChange={setUsersPage}
+                    maxVisiblePages={5}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -1781,7 +1828,6 @@ export function AdminDashboard() {
                 <p className="text-sm text-gray-600 mb-4">
                   {(dialogType === 'create' || dialogType === 'edit') ? (dialogType === 'create' ? 'Điền thông tin để tạo sản phẩm mới' : 'Cập nhật thông tin sản phẩm') :
                    (dialogType === 'create-user' || dialogType === 'edit-user') ? (dialogType === 'create-user' ? 'Điền thông tin để tạo người dùng mới' : 'Cập nhật thông tin người dùng') :
-                   (dialogType === 'create-voucher' || dialogType === 'edit-voucher') ? (dialogType === 'create-voucher' ? 'Điền thông tin để tạo voucher mới' : 'Cập nhật thông tin voucher') :
                    (dialogType === 'create-reward' || dialogType === 'edit-reward') ? (dialogType === 'create-reward' ? 'Điền thông tin để thêm phần thưởng mới' : 'Cập nhật thông tin phần thưởng') :
                    ''}
                 </p>
@@ -1855,7 +1901,7 @@ export function AdminDashboard() {
                         <SelectValue placeholder="Chọn danh mục" />
                       </SelectTrigger>
                       <SelectContent 
-                        className="max-h-[200px] overflow-y-auto" 
+                        className="max-h-[200px] overflow-y-auto z-[10001]" 
                         style={{ zIndex: 10001 }} 
                         position="popper"
                       >
@@ -1990,7 +2036,11 @@ export function AdminDashboard() {
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent 
+                        position="popper"
+                        style={{ zIndex: 10001 }}
+                        className="z-[10001]"
+                      >
                         <SelectItem value="user">Người dùng</SelectItem>
                         <SelectItem value="admin">Quản trị viên</SelectItem>
                       </SelectContent>
@@ -2005,89 +2055,6 @@ export function AdminDashboard() {
                       className="w-4 h-4"
                     />
                     <Label htmlFor="user-active">Tài khoản hoạt động</Label>
-                  </div>
-                </div>
-                )}
-
-                {/* Voucher Form */}
-                {(dialogType === 'create-voucher' || dialogType === 'edit-voucher') && (
-                <div className="grid gap-4">
-                  <div>
-                    <Label htmlFor="voucher-code">Mã voucher *</Label>
-                    <Input
-                      id="voucher-code"
-                      value={formData.code || ''}
-                      onChange={(e) => setFormData({...formData, code: e.target.value.toUpperCase()})}
-                      placeholder="GREEN20"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="voucher-type">Loại *</Label>
-                      <Select value={formData.type || 'PERCENTAGE'} onValueChange={(value) => setFormData({...formData, type: value})}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="PERCENTAGE">Phần trăm (%)</SelectItem>
-                          <SelectItem value="FIXED_AMOUNT">Số tiền cố định</SelectItem>
-                          <SelectItem value="FREE_SHIPPING">Miễn phí vận chuyển</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="voucher-value">Giá trị *</Label>
-                      <Input
-                        id="voucher-value"
-                        type="number"
-                        min="0"
-                        value={formData.value || 0}
-                        onChange={(e) => setFormData({...formData, value: Number(e.target.value)})}
-                        placeholder={formData.type === 'PERCENTAGE' ? '20' : '50000'}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="voucher-min-order">Đơn hàng tối thiểu (₫)</Label>
-                      <Input
-                        id="voucher-min-order"
-                        type="number"
-                        min="0"
-                        value={formData.minOrderAmount || 0}
-                        onChange={(e) => setFormData({...formData, minOrderAmount: Number(e.target.value)})}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="voucher-max-uses">Số lần sử dụng tối đa</Label>
-                      <Input
-                        id="voucher-max-uses"
-                        type="number"
-                        min="1"
-                        value={formData.maxUses || 100}
-                        onChange={(e) => setFormData({...formData, maxUses: Number(e.target.value)})}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="voucher-valid-from">Ngày bắt đầu</Label>
-                      <Input
-                        id="voucher-valid-from"
-                        type="date"
-                        value={formData.validFrom || ''}
-                        onChange={(e) => setFormData({...formData, validFrom: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="voucher-valid-until">Ngày kết thúc</Label>
-                      <Input
-                        id="voucher-valid-until"
-                        type="date"
-                        value={formData.validUntil || ''}
-                        onChange={(e) => setFormData({...formData, validUntil: e.target.value})}
-                      />
-                    </div>
                   </div>
                 </div>
                 )}
@@ -2131,7 +2098,11 @@ export function AdminDashboard() {
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent 
+                          position="popper"
+                          style={{ zIndex: 10001 }}
+                          className="z-[10001]"
+                        >
                           <SelectItem value="voucher">Voucher</SelectItem>
                           <SelectItem value="discount">Giảm giá</SelectItem>
                           <SelectItem value="free_shipping">Miễn phí vận chuyển</SelectItem>
@@ -2300,7 +2271,6 @@ export function AdminDashboard() {
                   <Button onClick={
                     (dialogType === 'create' || dialogType === 'edit') ? handleSaveProduct :
                     (dialogType === 'create-user' || dialogType === 'edit-user') ? handleSaveUser :
-                    (dialogType === 'create-voucher' || dialogType === 'edit-voucher') ? handleSaveVoucher :
                     (dialogType === 'create-reward' || dialogType === 'edit-reward') ? handleSaveReward :
                     (dialogType === 'create-material' || dialogType === 'edit-material') ? handleSaveMaterial :
                     (dialogType === 'create-print-method' || dialogType === 'edit-print-method') ? handleSavePrintMethod :
@@ -2308,7 +2278,7 @@ export function AdminDashboard() {
                     handleCloseDialog
                   }>
                     <Save className="w-4 h-4 mr-2" />
-                    {(dialogType === 'create' || dialogType === 'create-user' || dialogType === 'create-voucher' || dialogType === 'create-reward' || dialogType === 'create-material' || dialogType === 'create-print-method' || dialogType === 'create-payment-method') ? 'Tạo' : 'Lưu'}
+                    {(dialogType === 'create' || dialogType === 'create-user' || dialogType === 'create-reward' || dialogType === 'create-material' || dialogType === 'create-print-method' || dialogType === 'create-payment-method') ? 'Tạo' : 'Lưu'}
                   </Button>
                 </div>
             </div>

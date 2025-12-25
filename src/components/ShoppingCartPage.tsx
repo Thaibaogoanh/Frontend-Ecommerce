@@ -11,6 +11,7 @@ import { useAuth } from '../hooks/useAuth';
 import { apiServices } from '../services/apiConfig';
 import { Loading } from './ui/loading';
 import { ErrorDisplay } from './ui/error';
+import { ProductCard } from './shared/ProductCard';
 
 interface CartItem {
   id: string;
@@ -31,12 +32,16 @@ export function ShoppingCartPage() {
   const [voucherCode, setVoucherCode] = useState("");
   const [appliedVoucher, setAppliedVoucher] = useState<{ code: string; discount: number } | null>(null);
   const [applyingVoucher, setApplyingVoucher] = useState(false);
+  const [userVouchers, setUserVouchers] = useState<any[]>([]);
+  const [frequentlyBought, setFrequentlyBought] = useState<any[]>([]);
+  const [loadingFrequentlyBought, setLoadingFrequentlyBought] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
       const currentToken = getToken();
       if (currentToken) {
         loadCart();
+        loadUserVouchers();
         // Load applied voucher từ localStorage
         const savedVoucher = localStorage.getItem('appliedVoucher');
         if (savedVoucher) {
@@ -52,6 +57,37 @@ export function ShoppingCartPage() {
       }
     }
   }, [authLoading]);
+
+  const loadUserVouchers = async () => {
+    try {
+      const currentToken = getToken();
+      if (!currentToken) return;
+
+      const vouchersData = await apiServices.vouchers.getMyVouchers(currentToken).catch(() => []);
+      const vouchersList = Array.isArray(vouchersData) ? vouchersData : [];
+      const formattedVouchers = vouchersList
+        .filter((uv: any) => {
+          // Chỉ lấy vouchers chưa sử dụng và chưa hết hạn
+          const isUsed = uv.status === 'used' || uv.isUsed || false;
+          const expiresAt = uv.voucher?.validUntil || uv.voucher?.expiresAt;
+          const isExpired = expiresAt ? new Date(expiresAt) < new Date() : false;
+          return !isUsed && !isExpired;
+        })
+        .map((uv: any) => ({
+          id: uv.id || uv.VOUCHER_ID,
+          code: uv.voucher?.code || uv.code,
+          name: uv.voucher?.name || uv.voucher?.title || 'Voucher',
+          discount: uv.voucher?.discountValue || uv.voucher?.value || 0,
+          discountType: uv.voucher?.type || 'fixed',
+          minOrderAmount: uv.voucher?.minOrderAmount || 0,
+          expiresAt: uv.voucher?.validUntil || uv.voucher?.expiresAt,
+          voucher: uv.voucher,
+        }));
+      setUserVouchers(formattedVouchers);
+    } catch (err) {
+      console.error('Failed to load vouchers:', err);
+    }
+  };
 
   const loadCart = async () => {
     try {
@@ -79,10 +115,28 @@ export function ShoppingCartPage() {
         customDesignData: item.customDesignData, // Include custom design data
       }));
       setCartItems(formattedItems);
+      
+      // Load frequently bought together for first item in cart
+      if (formattedItems.length > 0 && formattedItems[0].productId) {
+        loadFrequentlyBought(formattedItems[0].productId);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể tải giỏ hàng');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadFrequentlyBought = async (productId: string) => {
+    try {
+      setLoadingFrequentlyBought(true);
+      const response = await apiServices.products.getFrequentlyBought(productId, 4);
+      setFrequentlyBought(Array.isArray(response) ? response : []);
+    } catch (err) {
+      console.error('Failed to load frequently bought products:', err);
+      setFrequentlyBought([]);
+    } finally {
+      setLoadingFrequentlyBought(false);
     }
   };
 
@@ -117,9 +171,10 @@ export function ShoppingCartPage() {
     }
   };
 
-  const applyVoucher = async () => {
-    if (!voucherCode.trim()) {
-      setError('Vui lòng nhập mã voucher');
+  const applyVoucher = async (voucherCodeParam?: string) => {
+    const code = voucherCodeParam || voucherCode.trim();
+    if (!code) {
+      setError('Vui lòng chọn voucher');
       return;
     }
     try {
@@ -137,7 +192,7 @@ export function ShoppingCartPage() {
 
       // Validate voucher using correct endpoint
       const validation = await apiServices.vouchers.validate(
-        voucherCode.trim().toUpperCase(),
+        code.toUpperCase(),
         cartTotal,
         currentToken
       );
@@ -148,7 +203,7 @@ export function ShoppingCartPage() {
       }
 
       const voucherData = { 
-        code: voucherCode.trim().toUpperCase(), 
+        code: code.toUpperCase(), 
         discount: validation.discount / cartTotal, // Convert to percentage
         discountAmount: validation.discount,
         voucher: validation.voucher,
@@ -336,45 +391,91 @@ export function ShoppingCartPage() {
 
                       {/* Voucher */}
                       <div className="mb-6 p-4 bg-white border-2 border-dashed border-gray-300 rounded-lg">
-                        <label className="block text-sm font-medium mb-2 flex items-center gap-2">
+                        <label className="block text-sm font-medium mb-3 flex items-center gap-2">
                           <Tag className="w-4 h-4 text-[#ca6946]" />
                           Mã Voucher / Mã giảm giá
                         </label>
                         {!appliedVoucher ? (
-                          <div className="flex gap-2">
-                            <Input
-                              value={voucherCode}
-                              onChange={(e) => setVoucherCode(e.target.value)}
-                              onKeyPress={(e) => e.key === 'Enter' && applyVoucher()}
-                              placeholder="Nhập mã voucher"
-                              className="flex-1 border-2 focus:border-[#ca6946]"
-                              disabled={applyingVoucher}
-                            />
-                            <button
-                              onClick={applyVoucher}
-                              disabled={applyingVoucher || !voucherCode.trim()}
-                              className="px-6 py-2 bg-[#ca6946] hover:bg-[#b55835] disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
-                            >
-                              {applyingVoucher ? 'Đang áp dụng...' : 'Áp dụng'}
-                            </button>
+                          <div className="space-y-2">
+                            {userVouchers.length > 0 ? (
+                              <>
+                                <p className="text-xs text-gray-600 mb-2">Chọn voucher của bạn:</p>
+                                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                                  {userVouchers.map((voucher: any) => {
+                                    const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                                    const canUse = !voucher.minOrderAmount || subtotal >= voucher.minOrderAmount;
+                                    return (
+                                      <button
+                                        key={voucher.id}
+                                        type="button"
+                                        onClick={() => applyVoucher(voucher.code)}
+                                        disabled={!canUse || applyingVoucher}
+                                        className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                                          canUse && !applyingVoucher
+                                            ? 'border-gray-200 hover:border-[#ca6946] hover:bg-[#ca6946]/5 cursor-pointer'
+                                            : 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
+                                        }`}
+                                      >
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <span className="font-semibold text-sm">{voucher.name}</span>
+                                              <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded">
+                                                {voucher.code}
+                                              </span>
+                                            </div>
+                                            <p className="text-xs text-gray-600">
+                                              {voucher.discountType === 'percentage'
+                                                ? `Giảm ${voucher.discount}%`
+                                                : `Giảm ${voucher.discount.toLocaleString('vi-VN')}₫`}
+                                              {voucher.minOrderAmount > 0 && (
+                                                <span className="text-gray-500">
+                                                  {' '}• Đơn tối thiểu {voucher.minOrderAmount.toLocaleString('vi-VN')}₫
+                                                </span>
+                                              )}
+                                            </p>
+                                            {!canUse && (
+                                              <p className="text-xs text-red-600 mt-1">
+                                                Chưa đủ điều kiện sử dụng
+                                              </p>
+                                            )}
+                                          </div>
+                                          <ChevronRight className="w-4 h-4 text-gray-400" />
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-center py-4">
+                                <p className="text-sm text-gray-500 mb-2">Bạn chưa có voucher nào</p>
+                                <a
+                                  href="#dashboard?tab=rewards"
+                                  className="text-sm text-[#ca6946] hover:underline"
+                                >
+                                  Xem phần thưởng →
+                                </a>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2 text-sm text-green-700">
-                                <Tag className="w-4 h-4 fill-green-700" />
+                                <Tag className="w-4 h-4" />
                                 <span className="font-medium">Voucher "{appliedVoucher.code}" đã áp dụng</span>
                               </div>
                               <button
                                 onClick={removeVoucher}
-                                className="text-red-500 hover:text-red-700 text-sm"
+                                className="text-red-500 hover:text-red-700"
                                 title="Xóa voucher"
                               >
                                 <X className="w-4 h-4" />
                               </button>
                             </div>
                             <p className="text-xs text-green-600 mt-1">
-                              Giảm {appliedVoucher.discount * 100}% (tối đa {appliedVoucher.discountAmount?.toLocaleString('vi-VN')}₫)
+                              Giảm {appliedVoucher.discountAmount?.toLocaleString('vi-VN') || (appliedVoucher.discount * 100)}₫
                             </p>
                           </div>
                         )}

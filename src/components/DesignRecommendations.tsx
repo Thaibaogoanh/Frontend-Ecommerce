@@ -1,14 +1,15 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { ProductCard } from './shared/ProductCard';
 import { apiServices } from '../services/apiConfig';
 import { useAuth } from '../hooks/useAuth';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+import { Heart, Eye } from 'lucide-react';
 
 const ITEMS_PER_VIEW = 4;
 
-export function ProductRecommendations() {
+export function DesignRecommendations() {
   const { getToken } = useAuth();
-  const [products, setProducts] = useState<any[]>([]);
+  const [designs, setDesigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -25,28 +26,28 @@ export function ProductRecommendations() {
       
       // Use AI recommended if logged in, otherwise use trending
       if (token) {
-        const response = await apiServices.products.getRecommended(token, 8);
-        setProducts(Array.isArray(response) ? response : []);
+        const response = await apiServices.designs.getRecommended(token, 8);
+        setDesigns(Array.isArray(response) ? response : []);
       } else {
-        const response = await apiServices.products.getAITrending(8);
-        setProducts(Array.isArray(response) ? response : []);
+        const response = await apiServices.designs.getTrending(8);
+        setDesigns(Array.isArray(response.designs) ? response.designs : []);
       }
     } catch (err) {
-      console.error('Failed to load recommendations:', err);
-      setError(err instanceof Error ? err.message : 'Không thể tải sản phẩm');
+      console.error('Failed to load design recommendations:', err);
+      setError(err instanceof Error ? err.message : 'Không thể tải thiết kế');
       // Fallback to trending if recommended fails
       try {
-        const response = await apiServices.products.getAITrending(8);
-        setProducts(Array.isArray(response) ? response : []);
+        const response = await apiServices.designs.getTrending(8);
+        setDesigns(Array.isArray(response.designs) ? response.designs : []);
       } catch (fallbackErr) {
-        setProducts([]);
+        setDesigns([]);
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const maxIndex = Math.max(0, products.length - ITEMS_PER_VIEW);
+  const maxIndex = Math.max(0, designs.length - ITEMS_PER_VIEW);
 
   const next = () => {
     setCurrentIndex((prev) => Math.min(prev + 1, maxIndex));
@@ -57,46 +58,46 @@ export function ProductRecommendations() {
   };
 
   // Show loading state but don't hide the section
-  if (loading && products.length === 0) {
+  if (loading && designs.length === 0) {
     return (
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-end justify-between mb-8">
             <div>
               <h2 className="font-['Lato'] uppercase tracking-wider mb-2">
-                Sản Phẩm Phôi Dành Cho Bạn
+                Thiết Kế Dành Cho Bạn
               </h2>
               <p className="text-gray-600">
                 {getToken() 
-                  ? 'Các sản phẩm phôi được gợi ý dựa trên sở thích của bạn'
-                  : 'Các sản phẩm phôi đang được yêu thích'}
+                  ? 'Các thiết kế được gợi ý dựa trên sở thích của bạn'
+                  : 'Các thiết kế đang được yêu thích'}
               </p>
             </div>
           </div>
-          <div className="text-center py-12 text-gray-500">Đang tải sản phẩm...</div>
+          <div className="text-center py-12 text-gray-500">Đang tải thiết kế...</div>
         </div>
       </section>
     );
   }
 
-  // If error or no products, try to show trending as fallback
-  if (error || products.length === 0) {
+  // If error or no designs, try to show trending as fallback
+  if (error || designs.length === 0) {
     // Already tried fallback in loadRecommendations, so just show empty state
     return null;
   }
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-16 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-end justify-between mb-8">
           <div>
             <h2 className="font-['Lato'] uppercase tracking-wider mb-2">
-              Sản Phẩm Phôi Dành Cho Bạn
+              Thiết Kế Dành Cho Bạn
             </h2>
             <p className="text-gray-600">
               {getToken() 
-                ? 'Các sản phẩm phôi được gợi ý dựa trên sở thích của bạn'
-                : 'Các sản phẩm phôi đang được yêu thích'}
+                ? 'Các thiết kế được gợi ý dựa trên sở thích của bạn'
+                : 'Các thiết kế đang được yêu thích'}
             </p>
           </div>
 
@@ -121,7 +122,7 @@ export function ProductRecommendations() {
               </button>
             </div>
             <a
-              href="#blanks"
+              href="#design-gallery"
               className="inline-block border-2 border-black hover:bg-black hover:text-white px-6 py-2 rounded-full transition-all font-medium text-sm"
             >
               Xem tất cả
@@ -137,18 +138,44 @@ export function ProductRecommendations() {
               transform: `translateX(-${currentIndex * (100 / ITEMS_PER_VIEW)}%)`,
             }}
           >
-            {products.map((product) => (
+            {designs.map((design) => (
               <div
-                key={product.id}
+                key={design.DESIGN_ID || design.id}
                 className="flex-shrink-0"
                 style={{ width: `calc(${100 / ITEMS_PER_VIEW}% - 12px)` }}
               >
-                <ProductCard
-                  product={product}
-                  viewMode="grid"
-                  showEcoBadges={true}
-                  showCustomizeButton={true}
-                />
+                <a
+                  href={`#design-detail?id=${design.DESIGN_ID || design.id}`}
+                  className="block group"
+                >
+                  <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
+                    <ImageWithFallback
+                      src={design.preview_url || design.assets?.[0]?.file_url || design.image}
+                      alt={design.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    {/* Overlay on hover */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <span className="text-white text-sm font-medium px-4 py-2 bg-[#ca6946] rounded-full shadow-lg">
+                        Xem chi tiết
+                      </span>
+                    </div>
+                    {/* Stats */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3 text-white">
+                      <h3 className="font-semibold text-sm mb-1 truncate">{design.title}</h3>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-3 h-3" />
+                          {design.likes || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Eye className="w-3 h-3" />
+                          {design.downloads || 0}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </a>
               </div>
             ))}
           </div>
@@ -173,3 +200,4 @@ export function ProductRecommendations() {
     </section>
   );
 }
+

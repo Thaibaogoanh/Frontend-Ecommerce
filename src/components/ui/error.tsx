@@ -8,7 +8,7 @@ interface ErrorDisplayProps {
 }
 
 export function ErrorDisplay({ 
-  message = 'Something went wrong. Please try again.', 
+  message = 'Đã xảy ra lỗi. Vui lòng thử lại.', 
   onRetry,
   fullScreen = false 
 }: ErrorDisplayProps) {
@@ -18,13 +18,13 @@ export function ErrorDisplay({
         <AlertCircle className="w-8 h-8 text-red-600" />
       </div>
       <div>
-        <h3 className="font-semibold text-gray-900 mb-1">Error</h3>
+        <h3 className="font-semibold text-gray-900 mb-1">Lỗi</h3>
         <p className="text-sm text-gray-600 max-w-md">{message}</p>
       </div>
       {onRetry && (
         <Button onClick={onRetry} variant="outline" size="sm">
           <RefreshCw className="w-4 h-4 mr-2" />
-          Try Again
+          Thử lại
         </Button>
       )}
     </div>

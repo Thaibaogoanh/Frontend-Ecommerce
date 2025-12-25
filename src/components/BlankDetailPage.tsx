@@ -112,9 +112,8 @@ export function BlankDetailPage() {
         setSelectedSize(response.skuVariants[0]?.size || 'M');
       }
 
-      // Load similar products, reviews, review stats, and favorite status
-      const categoryId = response.categoryId || (typeof response.category === 'string' ? response.category : response.category?.id);
-      loadSimilarProducts(categoryId);
+      // Load similar products using AI, reviews, review stats, and favorite status
+      loadSimilarProducts(productId);
       loadReviews(productId);
       loadReviewStats(productId);
       if (token) {
@@ -401,12 +400,28 @@ export function BlankDetailPage() {
 
               {/* Price */}
               <p className="mb-4">
-                <span className="text-gray-500">Từ</span>{' '}
-                <span className="font-bold">{product.price.toLocaleString('vi-VN')}₫</span>
+                {(() => {
+                  const priceValue = product.price !== null && product.price !== undefined 
+                    ? Number(product.price) 
+                    : null;
+                  
+                  if (priceValue !== null && priceValue > 0) {
+                    return (
+                      <>
+                        <span className="text-gray-500">Từ</span>{' '}
+                        <span className="font-bold">{priceValue.toLocaleString('vi-VN')}₫</span>
+                      </>
+                    );
+                  } else if (product.price === null || product.price === undefined) {
+                    return <span className="font-bold text-gray-600">Liên hệ</span>;
+                  } else {
+                    return <span className="font-bold text-green-600">Miễn phí</span>;
+                  }
+                })()}
               </p>
 
               {/* Rating - Only show if product has rating */}
-              {product.rating && (
+              {product.rating && product.rating > 0 ? (
                 <div className="flex items-center gap-3 mb-6 pb-6 border-b">
                   <div className="flex items-center gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -420,9 +435,11 @@ export function BlankDetailPage() {
                     ))}
                   </div>
                   <span className="font-medium">{product.rating}</span>
-                  <span className="text-gray-500">({product.reviews || 0} reviews)</span>
+                  <span className="text-gray-500">
+                    ({(product.reviews || product.numReviews || 0) > 0 ? (product.reviews || product.numReviews || 0) : ''} reviews)
+                  </span>
                 </div>
-              )}
+              ) : null}
 
               {/* Green Badges - Only show if product has greenBadges */}
               {product.greenBadges && Array.isArray(product.greenBadges) && product.greenBadges.length > 0 && (
@@ -525,6 +542,15 @@ export function BlankDetailPage() {
                 </div>
               )}
 
+              {/* Stock Info - Only show if stock > 0 */}
+              {product.stock !== undefined && product.stock !== null && Number(product.stock) > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600">
+                    Còn <span className="font-semibold text-[#ca6946]">{Number(product.stock)}</span> sản phẩm
+                  </p>
+                </div>
+              )}
+
               {/* Quantity */}
               <div className="mb-8">
                 <h3 className="font-['Lato'] mb-3">Số lượng</h3>
@@ -537,7 +563,12 @@ export function BlankDetailPage() {
                   </button>
                   <span className="w-16 text-center">{quantity}</span>
                   <button
-                    onClick={() => setQuantity(quantity + 1)}
+                    onClick={() => {
+                      const maxQuantity = product.stock && Number(product.stock) > 0 
+                        ? Number(product.stock) 
+                        : 999;
+                      setQuantity(Math.min(maxQuantity, quantity + 1));
+                    }}
                     className="w-10 h-10 border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
                     +
@@ -614,7 +645,7 @@ export function BlankDetailPage() {
                 Cam kết Xanh
               </TabsTrigger>
               <TabsTrigger value="reviews" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#ca6946] px-6 py-3">
-                Đánh giá ({product.reviews})
+                Đánh giá ({(product.reviews || product.numReviews || 0) > 0 ? (product.reviews || product.numReviews || 0) : 0})
               </TabsTrigger>
             </TabsList>
 
@@ -789,7 +820,9 @@ export function BlankDetailPage() {
                       ))}
                     </div>
                       <p className="text-gray-600">
-                        {reviewStats.totalReviews || product.reviews || 0} đánh giá
+                        {(reviewStats.totalReviews || product.reviews || product.numReviews || 0) > 0 
+                          ? (reviewStats.totalReviews || product.reviews || product.numReviews || 0) 
+                          : 0} đánh giá
                       </p>
                   </div>
 
@@ -834,7 +867,9 @@ export function BlankDetailPage() {
                     ))}
                   </div>
                       <p className="text-gray-600">
-                        {product.reviews || 0} đánh giá
+                        {(product.reviews || product.numReviews || 0) > 0 
+                          ? (product.reviews || product.numReviews || 0) 
+                          : 0} đánh giá
                       </p>
                 </div>
                     <div className="flex-1 text-gray-500 text-sm">

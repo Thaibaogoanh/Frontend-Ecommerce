@@ -45,13 +45,13 @@ export function ProductCard({
         }`}
       >
         <ImageWithFallback
-          src={product.image}
+          src={product.image || (Array.isArray(product.images) && product.images[0]?.url) || (typeof product.images === 'object' && product.images && 'url' in product.images ? product.images.url : undefined) || undefined}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
 
         {/* Eco Badges */}
-        {showEcoBadges && (
+        {showEcoBadges && (product.isEco || product.isRecycled) && (
           <div className="absolute top-3 left-3 flex flex-col gap-2">
             {product.isEco && (
               <div className="bg-[#BCF181] px-2 py-1 rounded-full flex items-center gap-1">
@@ -90,14 +90,14 @@ export function ProductCard({
         <h3 className="font-['Lato'] mb-2 line-clamp-2">{product.name}</h3>
 
         {/* Materials */}
-        {product.materials && product.materials.length > 0 && (
+        {product.materials && product.materials.length > 0 ? (
           <div className="text-xs text-gray-600 mb-2">
             <p className="line-clamp-1">{product.materials.join(' • ')}</p>
           </div>
-        )}
+        ) : null}
 
         {/* Rating & Reviews - Only show if rating > 0 */}
-        {product.rating && product.rating > 0 && (
+        {product.rating && product.rating > 0 ? (
           <div className="flex items-center gap-2 mb-3">
             <div className="flex items-center">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -112,16 +112,33 @@ export function ProductCard({
               ))}
             </div>
             <span className="text-xs text-gray-500">
-              ({product.reviews || product.numReviews || 0})
+              ({(product.reviews || product.numReviews || 0) > 0 ? (product.reviews || product.numReviews || 0) : ''})
             </span>
           </div>
-        )}
+        ) : null}
 
         {/* Price & Action */}
         <div className="flex items-center justify-between">
-          <p className="font-['Lato'] font-semibold">
-            {product.price.toLocaleString('vi-VN')}₫
-          </p>
+          <div>
+            {/* Old Price - Only show if exists and > 0 */}
+            {product.oldPrice && Number(product.oldPrice) > 0 && Number(product.oldPrice) > Number(product.price || 0) && (
+              <p className="text-sm text-gray-400 line-through mb-1">
+                {Number(product.oldPrice).toLocaleString('vi-VN')}₫
+              </p>
+            )}
+            {/* Current Price */}
+            <p className="font-['Lato'] font-semibold">
+              {product.price !== null && product.price !== undefined && Number(product.price) > 0 
+                ? `${Number(product.price).toLocaleString('vi-VN')}₫`
+                : product.price === null || product.price === undefined
+                  ? 'Liên hệ'
+                  : 'Miễn phí'}
+            </p>
+            {/* Stock - Only show if > 0 */}
+            {product.stock !== undefined && product.stock !== null && Number(product.stock) > 0 && (
+              <p className="text-xs text-gray-500 mt-1">Còn {Number(product.stock)} sản phẩm</p>
+            )}
+          </div>
           {!isGridView && (
             <button className="bg-[#ca6946] hover:bg-[#b55835] text-white px-4 py-2 rounded-full transition-colors text-sm">
               Tùy chỉnh

@@ -4,6 +4,7 @@ import { Header } from './Header';
 import { Footer } from './Footer';
 import { Checkbox } from './ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Slider } from './ui/slider';
 import { Search, Heart, Eye, ShoppingCart, ChevronRight, TrendingUp, Leaf } from 'lucide-react';
 import { apiServices } from '../services/apiConfig';
 import { useAuth } from '../hooks/useAuth';
@@ -28,12 +29,13 @@ export function DesignGalleryPage() {
   // Sorting
   const [sortBy, setSortBy] = useState('trending');
   
-  // Filters
+  // Filters - Simplified: Only Category, Tags, Price Range, Eco
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]); // Category filter (use real categories)
+  const [selectedTags, setSelectedTags] = useState<string[]>([]); // Tags filter (from design_tag)
+  const [priceRange, setPriceRange] = useState([0, 1000000]); // Price range filter
   const [ecoOnly, setEcoOnly] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]); // Load categories for filtering
   
   // Favorites/Likes
   const [likedDesigns, setLikedDesigns] = useState<string[]>([]);
@@ -44,11 +46,30 @@ export function DesignGalleryPage() {
   
   useEffect(() => {
     loadDesigns();
+    loadCategories();
   }, []);
+
+  const loadCategories = async () => {
+    try {
+      const cats = await apiServices.categories.getAll();
+      setCategories(cats);
+    } catch (err) {
+      console.error('Failed to load categories:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCategoryIds.length > 0 || priceRange[0] > 0 || priceRange[1] < 1000000) {
+      // Reload designs when categoryId or price filter changes (server-side filtering)
+      loadDesigns();
+    } else {
+      applyFiltersAndSort();
+    }
+  }, [selectedCategoryIds, priceRange]);
 
   useEffect(() => {
     applyFiltersAndSort();
-  }, [allDesigns, selectedCategories, selectedStyles, selectedTags, ecoOnly, searchQuery, sortBy, currentPage]);
+  }, [allDesigns, selectedTags, ecoOnly, searchQuery, sortBy, currentPage]);
 
   // ==================
   // DATA LOADING
@@ -59,8 +80,25 @@ export function DesignGalleryPage() {
       setLoading(true);
       setError(null);
       
-      // Load all approved designs (pagination on frontend for simplicity)
-      const response = await apiServices.designs.getAll(1, 100) as any;
+      // Build query params for filtering (server-side)
+      const params: any = {
+        minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
+        maxPrice: priceRange[1] < 1000000 ? priceRange[1] : undefined,
+        sortBy: sortBy === 'price-low' || sortBy === 'price-high' ? 'price' : 
+                sortBy === 'popular' ? 'likes' : 
+                sortBy === 'newest' ? 'createdAt' : 'createdAt',
+        sortOrder: sortBy === 'price-low' ? 'ASC' : 
+                   sortBy === 'price-high' ? 'DESC' : 
+                   sortBy === 'popular' ? 'DESC' : 'DESC',
+      };
+      
+      if (selectedCategoryIds.length > 0) {
+        // Use first selected categoryId for API filter
+        params.categoryId = selectedCategoryIds[0];
+      }
+      
+      // Load all approved designs
+      const response = await apiServices.designs.getAll(1, 100, params) as any;
       
       // Transform API response to match component structure
       const transformedDesigns = (response.designs || response || []).map((design: any) => ({
@@ -70,21 +108,36 @@ export function DesignGalleryPage() {
         image: design.preview_url || design.image || 'https://placehold.co/400x400',
         likes: design.likes || 0,
         views: design.downloads || design.views || 0,
-        price: design.price || 0,
+        price: design.price !== null && design.price !== undefined 
+          ? (typeof design.price === 'number' ? design.price : parseFloat(String(design.price)))
+          : null,
+        stock: design.stock !== null && design.stock !== undefined 
+          ? (typeof design.stock === 'number' ? design.stock : parseInt(String(design.stock), 10))
+          : null,
+        quantity: design.quantity !== null && design.quantity !== undefined 
+          ? (typeof design.quantity === 'number' ? design.quantity : parseInt(String(design.quantity), 10))
+          : null,
         // Parse tags - can be comma-separated string or array
         tags: design.design_tag 
           ? (typeof design.design_tag === 'string' 
               ? design.design_tag.split(',').map((t: string) => t.trim().toLowerCase()) 
               : [design.design_tag.toLowerCase()])
           : [],
-        category: design.category || 'Modern',
-        style: 'Modern', // Default - could be extended
+        category: design.category?.name || design.category || 'Modern',
+        categoryId: design.categoryId || design.category?.id,
         status: design.status || 'approved',
-        // Badges
-        isEco: (design.design_tag || '').toLowerCase().includes('eco') || 
-               (design.category || '').toLowerCase().includes('eco') ||
-               (design.category || '').toLowerCase().includes('nature') ||
-               (design.category || '').toLowerCase().includes('sustainable'),
+        createdAt: design.createdAt || new Date(),
+        // Badges - Get category name as string for comparison
+        isEco: (() => {
+          const categoryName = typeof design.category === 'string' 
+            ? design.category 
+            : (design.category?.name || '');
+          const categoryLower = categoryName.toLowerCase();
+          return (design.design_tag || '').toLowerCase().includes('eco') || 
+                 categoryLower.includes('eco') ||
+                 categoryLower.includes('nature') ||
+                 categoryLower.includes('sustainable');
+        })(),
         isTrending: (design.likes || 0) > 5 || (design.downloads || 0) > 20,
       }));
       
@@ -116,20 +169,19 @@ export function DesignGalleryPage() {
       );
     }
 
-    // 2. CATEGORY FILTER
-    if (selectedCategories.length > 0 && !selectedCategories.includes('All')) {
+    // 2. CATEGORY FILTER (by categoryId - already filtered server-side, but keep for client-side fallback)
+    if (selectedCategoryIds.length > 0) {
       filtered = filtered.filter(design => 
-        selectedCategories.some(cat => 
-          design.category.toLowerCase().includes(cat.toLowerCase())
-        )
+        selectedCategoryIds.includes(design.categoryId)
       );
     }
 
-    // 3. STYLE FILTER
-    if (selectedStyles.length > 0) {
-      filtered = filtered.filter(design => 
-        selectedStyles.includes(design.style)
-      );
+    // 3. PRICE RANGE FILTER (already filtered server-side, but keep for client-side fallback)
+    if (priceRange[0] > 0 || priceRange[1] < 1000000) {
+      filtered = filtered.filter(design => {
+        const price = design.price || 0;
+        return price >= priceRange[0] && price <= priceRange[1];
+      });
     }
 
     // 4. TAG FILTER
@@ -144,23 +196,23 @@ export function DesignGalleryPage() {
       filtered = filtered.filter(design => design.isEco);
     }
 
-    // 6. SORTING
+    // 6. SORTING (client-side fallback, but mostly done server-side)
     switch (sortBy) {
       case 'newest':
         filtered.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
         break;
       case 'popular':
-        filtered.sort((a, b) => b.views - a.views);
+        filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0));
         break;
       case 'price-low':
-        filtered.sort((a, b) => a.price - b.price);
+        filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
         break;
       case 'price-high':
-        filtered.sort((a, b) => b.price - a.price);
+        filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       case 'trending':
       default:
-        filtered.sort((a, b) => b.likes - a.likes);
+        filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0));
     }
 
     // 7. PAGINATION (Client-side)
@@ -190,8 +242,6 @@ export function DesignGalleryPage() {
       
       if (isCurrentlyLiked) {
         // Remove from favorites
-        // Find favorite ID by design ID
-        // For now, we'll just update local state and try to find it
         const designObj = designs.find(d => d.id === designId);
         if (designObj && designObj.favoriteId) {
           await apiServices.favorites.remove(designObj.favoriteId, token);
@@ -216,22 +266,6 @@ export function DesignGalleryPage() {
     }
   };
 
-  const toggleCategory = (category: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    );
-  };
-
-  const toggleStyle = (style: string) => {
-    setSelectedStyles(prev =>
-      prev.includes(style)
-        ? prev.filter(s => s !== style)
-        : [...prev, style]
-    );
-  };
-
   const toggleTag = (tag: string) => {
     setSelectedTags(prev =>
       prev.includes(tag)
@@ -242,9 +276,9 @@ export function DesignGalleryPage() {
 
   const clearAllFilters = () => {
     setSearchQuery('');
-    setSelectedCategories([]);
-    setSelectedStyles([]);
+    setSelectedCategoryIds([]);
     setSelectedTags([]);
+    setPriceRange([0, 1000000]);
     setEcoOnly(false);
     setSortBy('trending');
     setCurrentPage(1);
@@ -344,35 +378,49 @@ export function DesignGalleryPage() {
                   </button>
                 </div>
 
-                {/* Category Filter */}
+                {/* Category Filter - Use real categories from API */}
                 <div className="mb-6 pb-6 border-b">
                   <h4 className="font-['Lato'] font-semibold mb-3 text-sm">Danh mục</h4>
                   <div className="space-y-2">
-                    {['All', 'Modern', 'Vintage', 'Minimalist', 'Nature', 'Abstract'].map((cat) => (
-                      <label key={cat} className="flex items-center gap-2 cursor-pointer hover:text-[#ca6946] text-sm">
-                        <Checkbox
-                          checked={selectedCategories.includes(cat)}
-                          onCheckedChange={() => toggleCategory(cat)}
-                        />
-                        <span>{cat}</span>
-                      </label>
-                    ))}
+                    {categories.length > 0 ? (
+                      categories.map((cat) => (
+                        <label key={cat.id} className="flex items-center gap-2 cursor-pointer hover:text-[#ca6946] text-sm">
+                          <Checkbox
+                            checked={selectedCategoryIds.includes(cat.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedCategoryIds(prev => [...prev, cat.id]);
+                              } else {
+                                setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
+                              }
+                            }}
+                          />
+                          <span>{cat.name}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500">Đang tải danh mục...</p>
+                    )}
                   </div>
                 </div>
 
-                {/* Style Filter */}
+                {/* Price Range Filter */}
                 <div className="mb-6 pb-6 border-b">
-                  <h4 className="font-['Lato'] font-semibold mb-3 text-sm">Phong cách</h4>
-                  <div className="space-y-2">
-                    {['Minimalist', 'Vintage', 'Modern', 'Hand-drawn', 'Geometric', 'Organic'].map((style) => (
-                      <label key={style} className="flex items-center gap-2 cursor-pointer hover:text-[#ca6946] text-sm">
-                        <Checkbox
-                          checked={selectedStyles.includes(style)}
-                          onCheckedChange={() => toggleStyle(style)}
-                        />
-                        <span>{style}</span>
-                      </label>
-                    ))}
+                  <h4 className="font-['Lato'] font-semibold mb-3 text-sm">Giá</h4>
+                  <Slider
+                    value={priceRange}
+                    onValueChange={(value) => {
+                      setPriceRange(value);
+                      setCurrentPage(1);
+                    }}
+                    min={0}
+                    max={1000000}
+                    step={50000}
+                    className="my-4"
+                  />
+                  <div className="flex justify-between text-sm text-gray-600 mt-2">
+                    <span>{priceRange[0].toLocaleString('vi-VN')}₫</span>
+                    <span>{priceRange[1].toLocaleString('vi-VN')}₫</span>
                   </div>
                 </div>
 
@@ -475,6 +523,11 @@ export function DesignGalleryPage() {
                                 <span className="text-white text-xs font-semibold">Trending</span>
                               </div>
                             )}
+                            {design.stock > 0 && design.stock < 10 && (
+                              <div className="bg-red-500 px-2 py-1 rounded-full">
+                                <span className="text-white text-xs font-semibold">Còn {design.stock} sản phẩm</span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Hover Actions */}
@@ -543,9 +596,18 @@ export function DesignGalleryPage() {
                                 {design.views}
                               </span>
                             </div>
-                            <p className="font-semibold text-[#ca6946]">
-                              {design.price > 0 ? `${design.price.toLocaleString('vi-VN')}₫` : 'Miễn phí'}
-                            </p>
+                            <div className="text-right">
+                              <p className="font-semibold text-[#ca6946] text-lg">
+                                {design.price && Number(design.price) > 0 
+                                  ? `${Number(design.price).toLocaleString('vi-VN')}₫` 
+                                  : design.price === null || design.price === undefined
+                                    ? 'Liên hệ'
+                                    : 'Miễn phí'}
+                              </p>
+                              {design.stock && Number(design.stock) > 0 && (
+                                <p className="text-xs text-gray-500 mt-1">Còn {Number(design.stock)} sản phẩm</p>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>

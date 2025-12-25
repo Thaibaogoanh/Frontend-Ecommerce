@@ -42,25 +42,14 @@ export function RegisterPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiServices.auth.register(email, password, confirmPassword);
+      const response = await apiServices.auth.register(email, password, fullName);
 
-      if (response && response.id) {
+      if (response && response.user) {
         setSuccess(true);
-        // Try to login automatically
-        try {
-          const loginRes = await apiServices.auth.login(email, password);
-          if (loginRes && loginRes.access_token && loginRes.user) {
-            login(loginRes.access_token, loginRes.user);
-            setTimeout(() => {
-              window.location.hash = '#dashboard';
-            }, 1000);
-          }
-        } catch (err) {
-          // If auto-login fails, redirect to login page
-          setTimeout(() => {
-            window.location.hash = '#login';
-          }, 2000);
-        }
+        // Redirect to login page after successful registration
+        setTimeout(() => {
+          window.location.hash = '#login';
+        }, 1500);
       } else {
         setError('Đăng ký thất bại');
       }
@@ -89,7 +78,7 @@ export function RegisterPage() {
           {/* Success Message */}
           {success && (
             <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded">
-              <p className="text-sm text-green-700">Đăng ký thành công! Đang chuyển hướng...</p>
+              <p className="text-sm text-green-700">Đăng ký thành công! Đang chuyển hướng đến trang đăng nhập...</p>
             </div>
           )}
 

@@ -4,7 +4,7 @@ import { Header } from './Header';
 import { Footer } from './Footer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Heart, Share2, ChevronRight, Leaf, ShoppingCart, Star, TrendingUp, Info } from 'lucide-react';
+import { Heart, Share2, ChevronRight, Leaf, ShoppingCart, Star, TrendingUp, Info, Palette } from 'lucide-react';
 import { apiServices, apiFetch, API_ENDPOINTS } from '../services/apiConfig';
 import { useAuth } from '../hooks/useAuth';
 import { Loading } from './ui/loading';
@@ -84,7 +84,13 @@ export function DesignDetailPage() {
       setLoading(true);
       setError(null);
       const urlParams = new URLSearchParams(window.location.hash.replace('#design-detail?', ''));
-      const designId = urlParams.get('id') || '1';
+      const designId = urlParams.get('id');
+      
+      if (!designId) {
+        setError('Không tìm thấy ID thiết kế');
+        setLoading(false);
+        return;
+      }
 
       const response = await apiServices.designs.getById(designId) as any;
       
@@ -103,7 +109,9 @@ export function DesignDetailPage() {
             : [],
         category: response.design_tag || 'Uncategorized',
         tags: response.design_tag ? response.design_tag.split(',').map((t: string) => t.trim()) : [],
-        price: 0, // Default price, should come from API or product selection
+        price: response.price !== null && response.price !== undefined 
+          ? (typeof response.price === 'number' ? response.price : parseFloat(String(response.price)))
+          : null,
         likes: response.likes || 0,
         views: response.downloads || 0,
         sales: 0, // Not available in API
@@ -124,13 +132,62 @@ export function DesignDetailPage() {
       
       setDesign(transformedDesign);
       
-      // Set default selected product if availableProducts exist
-      if (transformedDesign.availableProducts && transformedDesign.availableProducts.length > 0) {
-        const firstProduct = transformedDesign.availableProducts[0] as any;
-        setSelectedProduct(firstProduct);
-        // Load reviews for the selected product
-        if (firstProduct && firstProduct.id) {
-          loadReviews(firstProduct.id);
+      // Load a default product from the same category as the design for reviews
+      if (response.categoryId || response.category?.id) {
+        try {
+          const categoryId = response.categoryId || response.category?.id;
+          const productsResponse = await apiServices.products.getAll(1, 1, { categoryId }) as any;
+          if (productsResponse.products && productsResponse.products.length > 0) {
+            const firstProduct = productsResponse.products[0];
+            setSelectedProduct(firstProduct);
+            // Load reviews for the selected product
+            if (firstProduct && firstProduct.id) {
+              loadReviews(firstProduct.id);
+            }
+          } else {
+            // If no product in category, try to load any product as fallback
+            try {
+              const fallbackResponse = await apiServices.products.getAll(1, 1) as any;
+              if (fallbackResponse.products && fallbackResponse.products.length > 0) {
+                const fallbackProduct = fallbackResponse.products[0];
+                setSelectedProduct(fallbackProduct);
+                if (fallbackProduct && fallbackProduct.id) {
+                  loadReviews(fallbackProduct.id);
+                }
+              }
+            } catch (fallbackErr) {
+              console.error('Failed to load fallback product for reviews:', fallbackErr);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load default product for reviews:', err);
+          // Try to load any product as fallback
+          try {
+            const fallbackResponse = await apiServices.products.getAll(1, 1) as any;
+            if (fallbackResponse.products && fallbackResponse.products.length > 0) {
+              const fallbackProduct = fallbackResponse.products[0];
+              setSelectedProduct(fallbackProduct);
+              if (fallbackProduct && fallbackProduct.id) {
+                loadReviews(fallbackProduct.id);
+              }
+            }
+          } catch (fallbackErr) {
+            console.error('Failed to load fallback product for reviews:', fallbackErr);
+          }
+        }
+      } else {
+        // If design has no category, try to load any product as fallback
+        try {
+          const fallbackResponse = await apiServices.products.getAll(1, 1) as any;
+          if (fallbackResponse.products && fallbackResponse.products.length > 0) {
+            const fallbackProduct = fallbackResponse.products[0];
+            setSelectedProduct(fallbackProduct);
+            if (fallbackProduct && fallbackProduct.id) {
+              loadReviews(fallbackProduct.id);
+            }
+          }
+        } catch (fallbackErr) {
+          console.error('Failed to load fallback product for reviews:', fallbackErr);
         }
       }
 
@@ -532,6 +589,27 @@ export function DesignDetailPage() {
                 </div>
               </div>
 
+              {/* CTA Buttons */}
+              <div className="flex gap-3 mb-6">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={addingToCart || !selectedProduct}
+                  className="flex-1 bg-[#ca6946] hover:bg-[#b55835] disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-4 rounded-full transition-all flex items-center justify-center gap-2"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  {addingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
+                </button>
+                {selectedProduct && (
+                  <a
+                    href={`#customizer?id=${selectedProduct.id}${design?.id ? `&designId=${design.id}` : ''}`}
+                    className="flex-1 bg-white border-2 border-[#ca6946] text-[#ca6946] hover:bg-[#ca6946] hover:text-white py-4 rounded-full transition-all flex items-center justify-center gap-2"
+                  >
+                    <Palette className="w-5 h-5" />
+                    BẮT ĐẦU THIẾT KẾ
+                  </a>
+                )}
+              </div>
+
               {/* Quantity */}
               <div className="mb-6">
                 <label className="block font-['Lato'] mb-2">Số lượng</label>
@@ -562,23 +640,24 @@ export function DesignDetailPage() {
               <div className="mb-6">
                 <p className="text-gray-500 mb-1">Tổng giá (Sản phẩm + Thiết kế)</p>
                 <p className="text-3xl font-bold">
-                  {((design.price + (selectedProduct?.price || 0)) * quantity).toLocaleString('vi-VN')}₫
+                  {(() => {
+                    const designPrice = design.price !== null && design.price !== undefined && Number(design.price) > 0 
+                      ? Number(design.price) 
+                      : 0;
+                    const productPrice = selectedProduct?.price ? Number(selectedProduct.price) : 0;
+                    const totalPrice = (designPrice + productPrice) * quantity;
+                    return totalPrice > 0 
+                      ? `${totalPrice.toLocaleString('vi-VN')}₫`
+                      : 'Liên hệ';
+                  })()}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
                   Bao gồm tác phẩm thiết kế & in cao cấp
                 </p>
               </div>
 
-              {/* Action Buttons */}
+              {/* Favorite & Share Buttons */}
               <div className="flex gap-3 mb-6">
-                <button
-                  onClick={handleAddToCart}
-                  disabled={addingToCart}
-                  className="flex-1 bg-[#ca6946] hover:bg-[#b55835] disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-4 rounded-full transition-all flex items-center justify-center gap-2"
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                  {addingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
-                </button>
                 <button
                   onClick={handleToggleFavorite}
                   className={`w-14 h-14 border-2 rounded-full flex items-center justify-center transition-all ${isLiked
@@ -634,118 +713,125 @@ export function DesignDetailPage() {
           )}
 
           {/* Tabs Section - Reviews */}
-          {selectedProduct && (
-            <Tabs defaultValue="reviews" className="mb-16">
-              <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
-                <TabsTrigger value="reviews" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#ca6946] px-6 py-3">
-                  Đánh giá ({reviews.length})
-                </TabsTrigger>
-              </TabsList>
+          <Tabs defaultValue="reviews" className="mb-16">
+            <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
+              <TabsTrigger value="reviews" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#ca6946] px-6 py-3">
+                Đánh giá ({reviews.length})
+              </TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="reviews" className="mt-6">
-                <div className="max-w-4xl">
-                  {/* Write Review Form */}
-                  {token && (
-                    <div className="bg-gray-50 p-6 rounded-lg mb-8 border border-gray-200">
-                      <h3 className="text-lg font-semibold mb-4">Viết đánh giá của bạn</h3>
-                      <form onSubmit={async (e) => {
-                        e.preventDefault();
-                        const rating = (e.target as any).rating?.value;
-                        const comment = (e.target as any).comment?.value;
-                        
-                        if (!rating || !comment) {
-                          alert('Vui lòng điền đầy đủ thông tin');
-                          return;
-                        }
+            <TabsContent value="reviews" className="mt-6">
+              <div className="max-w-4xl">
+                {/* Write Review Form */}
+                {token && selectedProduct && selectedProduct.id ? (
+                  <div className="bg-gray-50 p-6 rounded-lg mb-8 border border-gray-200">
+                    <h3 className="text-lg font-semibold mb-4">Viết đánh giá của bạn</h3>
+                    <form onSubmit={async (e) => {
+                      e.preventDefault();
+                      const rating = (e.target as any).rating?.value;
+                      const comment = (e.target as any).comment?.value;
+                      
+                      if (!rating || !comment) {
+                        alert('Vui lòng điền đầy đủ thông tin');
+                        return;
+                      }
 
-                        try {
-                          await apiServices.reviews.create({
-                            productId: selectedProduct.id,
-                            rating: parseInt(rating),
-                            comment
-                          }, token);
-                          alert('Cảm ơn bạn! Đánh giá của bạn đã được gửi.');
-                          (e.target as any).reset();
-                          if (selectedProduct.id) loadReviews(selectedProduct.id);
-                        } catch (err) {
-                          alert('Không thể gửi đánh giá');
-                        }
-                      }}>
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium mb-3">Đánh giá</label>
-                            <StarRatingInput 
-                              name="rating" 
-                              required 
-                              defaultValue={0}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium mb-2">Bình luận</label>
-                            <textarea
-                              name="comment"
-                              rows={4}
-                              placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này..."
-                              className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:border-[#ca6946]"
-                              required
-                            />
-                          </div>
-                          <button type="submit" className="bg-[#ca6946] text-white px-6 py-2 rounded-lg hover:bg-[#b55835] transition-colors">
-                            Gửi đánh giá
-                          </button>
+                      try {
+                        await apiServices.reviews.create({
+                          productId: selectedProduct.id,
+                          rating: parseInt(rating),
+                          comment
+                        }, token);
+                        alert('Cảm ơn bạn! Đánh giá của bạn đã được gửi.');
+                        (e.target as any).reset();
+                        if (selectedProduct.id) loadReviews(selectedProduct.id);
+                      } catch (err) {
+                        alert('Không thể gửi đánh giá');
+                      }
+                    }}>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-3">Đánh giá</label>
+                          <StarRatingInput 
+                            name="rating" 
+                            required 
+                            defaultValue={0}
+                          />
                         </div>
-                      </form>
-                    </div>
-                  )}
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Bình luận</label>
+                          <textarea
+                            name="comment"
+                            rows={4}
+                            placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này..."
+                            className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:border-[#ca6946]"
+                            required
+                          />
+                        </div>
+                        <button type="submit" className="bg-[#ca6946] text-white px-6 py-2 rounded-lg hover:bg-[#b55835] transition-colors">
+                          Gửi đánh giá
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                ) : !token ? (
+                  <div className="bg-gray-50 p-6 rounded-lg mb-8 border border-gray-200 text-center">
+                    <p className="text-gray-600 mb-4">Vui lòng đăng nhập để viết đánh giá</p>
+                    <a href="#login" className="text-[#ca6946] hover:underline font-medium">Đăng nhập</a>
+                  </div>
+                ) : !selectedProduct ? (
+                  <div className="bg-gray-50 p-6 rounded-lg mb-8 border border-gray-200 text-center">
+                    <p className="text-gray-600">Vui lòng chọn sản phẩm để viết đánh giá</p>
+                  </div>
+                ) : null}
 
-                  {/* Reviews List */}
-                  {loadingReviews ? (
-                    <div className="text-center py-8">
-                      <Loading text="Đang tải đánh giá..." />
-                    </div>
-                  ) : reviews.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {reviews.map((review) => (
-                        <div key={review.id} className="pb-6 border-b last:border-0">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-medium">{review.author || review.user?.name || 'Người dùng'}</h4>
-                                {review.verified && (
-                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                                    Verified Purchase
-                                  </span>
-                                )}
+                {/* Reviews List */}
+                {loadingReviews ? (
+                  <div className="text-center py-8">
+                    <Loading text="Đang tải đánh giá..." />
+                  </div>
+                ) : reviews.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="pb-6 border-b last:border-0">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-medium">{review.author || review.user?.name || 'Người dùng'}</h4>
+                              {review.verified && (
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                  Verified Purchase
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`w-4 h-4 ${i < (review.rating || 0)
+                                      ? 'fill-yellow-400 text-yellow-400'
+                                      : 'text-gray-300'
+                                      }`}
+                                  />
+                                ))}
                               </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex">
-                                  {Array.from({ length: 5 }).map((_, i) => (
-                                    <Star
-                                      key={i}
-                                      className={`w-4 h-4 ${i < (review.rating || 0)
-                                        ? 'fill-yellow-400 text-yellow-400'
-                                        : 'text-gray-300'
-                                        }`}
-                                    />
-                                  ))}
-                                </div>
-                                <span className="text-sm text-gray-500">{review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN') : ''}</span>
-                              </div>
+                              <span className="text-sm text-gray-500">{review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN') : ''}</span>
                             </div>
                           </div>
-                          <p className="text-gray-600">{review.comment}</p>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
+                        <p className="text-gray-600">{review.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
 
           {/* Related Designs */}
           <div>

@@ -254,7 +254,7 @@ export function OrdersListPage() {
                                                         window.location.hash = `#order-detail?id=${order.id}`;
                                                     }}
                                                 >
-                                                    View Details
+                                                    Xem chi tiết
                                                     <ChevronRight className="w-4 h-4 ml-2" />
                                                 </Button>
                                                 {order.status === 'shipped' && order.trackingNumber && (

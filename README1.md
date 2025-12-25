@@ -13,7 +13,8 @@ Hướng dẫn hoàn chỉnh setup, chạy, và sử dụng ứng dụng React f
 5. [Pages & Components](#-pages--components)
 6. [Services & API Integration](#-services--api-integration)
 7. [Styling & UI](#-styling--ui)
-8. [Troubleshooting](#-troubleshooting)
+8. [Documentation](#-documentation)
+9. [Troubleshooting](#-troubleshooting)
 
 ---
 
@@ -833,6 +834,86 @@ const onSubmit = async (data) => {
   <UserDashboard />
 </ProtectedRoute>
 ```
+
+---
+
+## 📚 Documentation
+
+### **🚀 [START HERE - DOCUMENTATION INDEX](./DOCUMENTATION_INDEX.md)**
+Quick navigation guide to all documentation files & how to find information.
+
+---
+
+### **📚 Complete Documentation Suite**
+
+#### **1. Quick Reference** 🚀
+- **[PAGES_QUICK_REFERENCE.md](./PAGES_QUICK_REFERENCE.md)** - Danh sách nhanh tất cả 27 pages
+  - Quick page overview table (27 pages)
+  - Route path cho mỗi page
+  - API endpoints sử dụng cho mỗi page
+  - Features và actions
+  - 🔥 **START HERE** để bắt đầu
+
+#### **2. Detailed Documentation** 📖
+- **[FRONTEND_FLOW.md](./FRONTEND_FLOW.md)** - Tổng hợp chi tiết tất cả pages & APIs
+  - Chi tiết 27 pages (request/response examples)
+  - API mapping bảng (50+ endpoints)
+  - User flows & sequences
+  - Authentication & authorization
+  - Development setup guide
+
+#### **3. Visual Flows** 🎨
+- **[FLOWS_DIAGRAMS.md](./FLOWS_DIAGRAMS.md)** - Mermaid sequence diagrams
+  - 8 sequence diagrams cho user journeys
+  - Auth flows (Registration, Login)
+  - Shopping & Cart flows
+  - Customizer flows
+  - Checkout & Payment flows
+  - Order & Tracking flows
+  - Profile & Settings flows
+  - Reviews flows
+
+#### **4. Summary & Overview** 📊
+- **[SUMMARY.md](./SUMMARY.md)** - Project overview & statistics
+  - 27 pages & 50+ API endpoints
+  - Technology stack
+  - Complete pages list
+  - Development setup
+  - Deployment guide
+
+#### **5. Code References**
+- **[API Config](./src/services/apiConfig.ts)** - API endpoints & services (1,400+ lines)
+  - 50+ API endpoints mapping
+  - Service methods (apiServices)
+  - Error handling
+  - HTTP headers configuration
+
+#### **6. Backend Documentation** (in @backend folder):
+- `API_FLOW.md` - Backend API documentation (106+ endpoints)
+- `SEQUENCE_DIAGRAM.md` - API interaction diagrams
+- `PROJECT_SUMMARY.md` - Project overview
+
+---
+
+### **📖 How to Use Documentation**
+
+1. **First time?** 
+   - Start with **PAGES_QUICK_REFERENCE.md** for quick overview
+
+2. **Want details on specific page?**
+   - Check **FRONTEND_FLOW.md** - chi tiết từng page, request/response
+
+3. **Need to understand user flows?**
+   - Check **FLOWS_DIAGRAMS.md** - see sequence diagrams
+
+4. **Want project stats & overview?**
+   - Check **SUMMARY.md** - statistics, features, deployment
+
+5. **Need API endpoint information?**
+   - Check **API Config** (apiConfig.ts) - 50+ endpoints + service methods
+
+6. **Need to understand backend?**
+   - Check **backend/API_FLOW.md** - 106+ endpoints documented
 
 ---
 

@@ -1,11 +1,14 @@
-import { Search, ShoppingCart, User, Menu, Leaf, Gift, LogOut, Settings } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, Leaf, Gift, LogOut, Settings, Heart } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { apiServices } from '../services/apiConfig';
+import logoImage from '../assets/logo.png';
 
 export function Header() {
   const [showAccountMenu, setShowAccountMenu] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, getToken } = useAuth();
   const [cartCount, setCartCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Get cart count from localStorage
   useEffect(() => {
@@ -30,6 +33,7 @@ export function Header() {
     };
   }, []);
 
+
   return (
     <header className="bg-white border-b sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4">
@@ -37,22 +41,34 @@ export function Header() {
         <div className="flex items-center justify-between py-4 gap-6">
           {/* Logo */}
           <a href="#home" className="flex items-center gap-2 flex-shrink-0">
-            <div className="bg-[#BCF181] rounded-full p-2">
-              <Leaf className="w-5 h-5 text-black" />
-            </div>
-            <span className="font-['Lora'] tracking-wider">Sustainique</span>
+            <img 
+              src={logoImage} 
+              alt="Sustainique Logo" 
+              className="h-20 md:h-24 w-auto object-contain"
+            />
           </a>
 
           {/* Search Bar - Large like Etsy */}
           <div className="flex-1 max-w-3xl">
-            <div className="relative">
+            <form 
+              className="relative"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (searchQuery.trim()) {
+                  // Navigate to search results page
+                  window.location.hash = `#search?search=${encodeURIComponent(searchQuery.trim())}`;
+                }
+              }}
+            >
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Tìm kiếm phôi áo, thiết kế độc đáo, vouchers..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-full focus:outline-none focus:border-[#BCF181] transition-colors"
               />
-            </div>
+            </form>
           </div>
 
           {/* Right Actions */}
@@ -85,20 +101,12 @@ export function Header() {
                         <span>Bảng điều khiển</span>
                       </a>
                       <a
-                        href="#addresses"
+                        href="#dashboard"
                         className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
                         onClick={() => setShowAccountMenu(false)}
                       >
                         <Settings className="w-5 h-5" />
-                        <span>Quản lý địa chỉ</span>
-                      </a>
-                      <a
-                        href="#designs"
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                        onClick={() => setShowAccountMenu(false)}
-                      >
-                        <Leaf className="w-5 h-5" />
-                        <span>Thiết kế của tôi</span>
+                        <span>Bảng điều khiển</span>
                       </a>
                       {user.role === 'admin' && (
                         <>
@@ -161,14 +169,17 @@ export function Header() {
               )}
             </div>
             
-            <a href="#cart" className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
-              <ShoppingCart className="w-6 h-6" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#ca6946] text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-semibold">
-                  {cartCount > 9 ? '9+' : cartCount}
-                </span>
-              )}
-            </a>
+            {/* Cart - Only show when logged in */}
+            {user && (
+              <a href="#cart" className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                <ShoppingCart className="w-6 h-6" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#ca6946] text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-semibold">
+                    {cartCount > 9 ? '9+' : cartCount}
+                  </span>
+                )}
+              </a>
+            )}
 
             <button className="lg:hidden p-2">
               <Menu className="w-6 h-6" />
@@ -190,10 +201,6 @@ export function Header() {
           <a href="#about-green" className="flex items-center gap-1 hover:text-[#ca6946] transition-colors">
             <Leaf className="w-4 h-4" />
             <span>Về Xanh</span>
-          </a>
-          <a href="#dashboard" className="flex items-center gap-1 hover:text-[#ca6946] transition-colors">
-            <Gift className="w-4 h-4" />
-            <span>Phần thưởng</span>
           </a>
           <a href="#help" className="hover:text-[#ca6946] transition-colors">
             Trợ giúp

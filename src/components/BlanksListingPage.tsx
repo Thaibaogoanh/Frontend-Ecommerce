@@ -22,6 +22,23 @@ export function BlanksListingPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState([0, 1000000]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Read search query from URL
+  useEffect(() => {
+    const readSearchFromURL = () => {
+      const hash = window.location.hash;
+      const urlParams = new URLSearchParams(hash.split('?')[1] || '');
+      const search = urlParams.get('search') || '';
+      setSearchQuery(search);
+      setCurrentPage(1); // Reset to first page when search changes
+    };
+    
+    readSearchFromURL();
+    // Listen for hash changes
+    window.addEventListener('hashchange', readSearchFromURL);
+    return () => window.removeEventListener('hashchange', readSearchFromURL);
+  }, []);
 
   // Load categories
   useEffect(() => {
@@ -53,13 +70,10 @@ export function BlanksListingPage() {
         
         const sortConfig = sortMapping[sortBy] || sortMapping['newest'];
         
-        // Use getAll with blanksOnly: true and filters
+        // Use getBlanks endpoint with filters
         const params: any = {
-          page: currentPage,
-          limit: 12,
           sortBy: sortConfig.sortBy,
           sortOrder: sortConfig.sortOrder,
-          blanksOnly: true, // Chỉ lấy phôi áo
         };
         
         if (selectedCategory) {
@@ -74,7 +88,11 @@ export function BlanksListingPage() {
           params.maxPrice = priceRange[1];
         }
         
-        const response = await apiServices.products.getAll(currentPage, 12, params);
+        if (searchQuery.trim()) {
+          params.search = searchQuery.trim();
+        }
+        
+        const response = await apiServices.products.getBlanks(currentPage, 12, params);
         
         setProducts(response.products || []);
         setTotalPages(response.totalPages || 1);
@@ -86,7 +104,7 @@ export function BlanksListingPage() {
     };
     
     loadProducts();
-  }, [currentPage, selectedCategory, sortBy, priceRange]);
+  }, [currentPage, selectedCategory, sortBy, priceRange, searchQuery]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -105,12 +123,21 @@ export function BlanksListingPage() {
                 Trang chủ
               </a>
               <span>/</span>
-              <span className="text-black">Cửa hàng Phôi áo Bền vững</span>
+              <span className="text-black">
+                {searchQuery ? `Kết quả tìm kiếm: "${searchQuery}"` : 'Cửa hàng Phôi áo Bền vững'}
+              </span>
             </div>
           </div>
         </div>
 
         <div className="max-w-7xl mx-auto px-4 py-8">
+          {searchQuery && (
+            <div className="mb-6 p-4 bg-[#BCF181]/10 border border-[#BCF181] rounded-lg">
+              <p className="text-sm text-gray-700">
+                Đang hiển thị kết quả tìm kiếm cho: <span className="font-semibold">"{searchQuery}"</span>
+              </p>
+            </div>
+          )}
           <div className="flex gap-8">
             {/* Sidebar - Filters */}
             <aside className="hidden lg:block w-64 flex-shrink-0">

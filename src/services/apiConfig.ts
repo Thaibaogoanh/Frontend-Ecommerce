@@ -45,6 +45,11 @@ export const API_ENDPOINTS = {
     CREATE: `${API_BASE_URL}/products`,
     UPDATE: (id: string) => `${API_BASE_URL}/products/${id}`,
     DELETE: (id: string) => `${API_BASE_URL}/products/${id}`,
+    // AI Recommendation endpoints
+    GET_AI_TRENDING: `${API_BASE_URL}/products/ai/trending`,
+    GET_AI_SIMILAR: (id: string) => `${API_BASE_URL}/products/ai/similar/${id}`,
+    GET_AI_FREQUENTLY_BOUGHT: (id: string) => `${API_BASE_URL}/products/ai/frequently-bought/${id}`,
+    GET_AI_RECOMMENDED: `${API_BASE_URL}/products/ai/recommended`,
   },
 
   // ==================
@@ -53,6 +58,7 @@ export const API_ENDPOINTS = {
   DESIGNS: {
     GET_ALL: `${API_BASE_URL}/designs`,
     GET_TRENDING: `${API_BASE_URL}/designs/trending`,
+    GET_AI_RECOMMENDED: `${API_BASE_URL}/designs/ai/recommended`,
     GET_BY_ID: (id: string) => `${API_BASE_URL}/designs/${id}`,
     CREATE: `${API_BASE_URL}/designs`,
     UPDATE: (id: string) => `${API_BASE_URL}/designs/${id}`,
@@ -92,6 +98,7 @@ export const API_ENDPOINTS = {
     GET_MY_ORDERS: `${API_BASE_URL}/orders/my-orders`, // User orders
     GET_BY_ID: (id: string) => `${API_BASE_URL}/orders/${id}`,
     GET_TRACKING: (id: string) => `${API_BASE_URL}/orders/${id}/tracking`,
+    GET_STATS: `${API_BASE_URL}/orders/stats`, // Admin stats
     CANCEL: (id: string) => `${API_BASE_URL}/orders/${id}/cancel`,
   },
 
@@ -467,10 +474,10 @@ export async function apiFetch<T>(
 export const apiServices = {
   // Auth Services
   auth: {
-    register: (email: string, password: string, confirmPassword: string) =>
+    register: (email: string, password: string, name: string) =>
       apiFetch(API_ENDPOINTS.AUTH.REGISTER, {
         method: "POST",
-        body: JSON.stringify({ email, password, confirmPassword }),
+        body: JSON.stringify({ email, password, name }),
       }),
 
     login: (email: string, password: string) =>
@@ -503,10 +510,14 @@ export const apiServices = {
       return apiFetch(`${API_ENDPOINTS.PRODUCTS.GET_ALL}?${query}`);
     },
 
-    getBlanks: (page = 1, limit = 10) =>
-      apiFetch(
-        `${API_ENDPOINTS.PRODUCTS.GET_BLANKS}?page=${page}&limit=${limit}`
-      ),
+    getBlanks: (page = 1, limit = 10, params?: Record<string, any>) => {
+      const query = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        ...(params || {}),
+      });
+      return apiFetch(`${API_ENDPOINTS.PRODUCTS.GET_BLANKS}?${query}`);
+    },
 
     getReadyMade: (page = 1, limit = 10) =>
       apiFetch(
@@ -543,6 +554,19 @@ export const apiServices = {
         },
         token
       ),
+
+    // AI Recommendation Services
+    getAITrending: (limit = 10) =>
+      apiFetch(`${API_ENDPOINTS.PRODUCTS.GET_AI_TRENDING}?limit=${limit}`),
+
+    getSimilar: (id: string, limit = 5) =>
+      apiFetch(`${API_ENDPOINTS.PRODUCTS.GET_AI_SIMILAR(id)}?limit=${limit}`),
+
+    getFrequentlyBought: (id: string, limit = 5) =>
+      apiFetch(`${API_ENDPOINTS.PRODUCTS.GET_AI_FREQUENTLY_BOUGHT(id)}?limit=${limit}`),
+
+    getRecommended: (token: string, limit = 5) =>
+      apiFetch(`${API_ENDPOINTS.PRODUCTS.GET_AI_RECOMMENDED}?limit=${limit}`, undefined, token),
   },
 
   // Designs Services
@@ -552,13 +576,16 @@ export const apiServices = {
       const query = new URLSearchParams({
         limit: limit.toString(),
         offset: offset.toString(),
-        ...params,
+        ...(params || {}),
       });
       return apiFetch(`${API_ENDPOINTS.DESIGNS.GET_ALL}?${query}`);
     },
 
     getTrending: (limit = 10) =>
       apiFetch(`${API_ENDPOINTS.DESIGNS.GET_TRENDING}?limit=${limit}`),
+
+    getRecommended: (token: string, limit = 5) =>
+      apiFetch(`${API_ENDPOINTS.DESIGNS.GET_AI_RECOMMENDED}?limit=${limit}`, undefined, token),
 
     getById: (id: string) => apiFetch(API_ENDPOINTS.DESIGNS.GET_BY_ID(id)),
     
@@ -675,6 +702,9 @@ export const apiServices = {
         },
         token
       ),
+
+    getStats: (token: string) =>
+      apiFetch(API_ENDPOINTS.ORDERS.GET_STATS, undefined, token),
   },
 
   // Shipments Services
